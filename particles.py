@@ -1,6 +1,7 @@
 # A particles shooter class
 
 from bpy_extras import view3d_utils
+import random
 import bpy
 import mathutils
 
@@ -8,11 +9,16 @@ class Particles:
     """ A class managing the particle system for the paint operator """
     def __init__(self):
         pass
+        self.rnd = random.Random()
 
     def shoot(self, context, event):
         """ Shoot particles and paint them """
+        paint_size = self.get_brush_size(context)
+        offset_x = (2*self.rnd.random()-1)*paint_size
+        offset_y = (2*self.rnd.random()-1)*paint_size
         ray_origin,ray_direction = self.get_ray(context,
-                                             event.mouse_x, event.mouse_y)
+                                                event.mouse_x+offset_x,
+                                                event.mouse_y+offset_y)
         
         paint_object = context.active_object
         matrix = paint_object.matrix_world.copy()
@@ -34,6 +40,10 @@ class Particles:
     def get_active_brush(self, context):
         """ Get the active brush """
         return context.tool_settings.image_paint.brush
+
+    def get_brush_size(self, context):
+        """ Get the active brush size """
+        return context.tool_settings.unified_paint_settings.size
 
     def get_ray(self, context, x, y):
         """ Get the ray under the mouse cursor """
@@ -76,9 +86,6 @@ class Particles:
         uvMap = mesh.uv_layers['UVMap']
         uvMapIndices = face.loop_indices
 
-
-
-        #uvs = [mesh.uvs[vi].co for vi in face.vertices]
         tessellated = mathutils.geometry.tessellate_polygon([points])
         for tri in tessellated:
             p0 = points[tri[0]]
