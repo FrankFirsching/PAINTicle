@@ -63,7 +63,7 @@ class PaintOperator(bpy.types.Operator):
                 rv3d.view_perspective = 'PERSP'
 
             self._left_mouse_pressed = False
-            self._particles = particle_paint.particles.Particles()
+            self._particles = particle_paint.particles.Particles(context)
 
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}

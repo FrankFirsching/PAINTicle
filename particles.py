@@ -1,36 +1,51 @@
 # A particles shooter class
 
 from bpy_extras import view3d_utils
-import random
 import bpy
 import mathutils
 
+import math
+import random
+
 class Particles:
     """ A class managing the particle system for the paint operator """
-    def __init__(self):
+    def __init__(self, context):
         pass
         self.rnd = random.Random()
+        self.paint_object = context.active_object
+        self.matrix = self.paint_object.matrix_world.copy()
+        self.paint_image = None
+        self.paint_pixels = None
 
     def shoot(self, context, event):
         """ Shoot particles and paint them """
         paint_size = self.get_brush_size(context)
-        offset_x = (2*self.rnd.random()-1)*paint_size
-        offset_y = (2*self.rnd.random()-1)*paint_size
+        angle = 2*math.pi*self.rnd.random()
+        distance = paint_size*self.rnd.random()
+        offset_x = math.cos(angle)*distance
+        offset_y = math.sin(angle)*distance
         ray_origin,ray_direction = self.get_ray(context,
                                                 event.mouse_x+offset_x,
                                                 event.mouse_y+offset_y)
         
-        paint_object = context.active_object
-        matrix = paint_object.matrix_world.copy()
-        location,normal,face_index = self.ray_cast_on_object(paint_object,
-                                                             matrix,
-                                                             ray_origin,
+        location,normal,face_index = self.ray_cast_on_object(ray_origin,
                                                              ray_direction)
 
         if location != None:
             paint_image = self.get_active_image(context)
+            self.cache_paint_image(paint_image)
             active_brush = self.get_active_brush(context)
-            self.paint_particles(location, normal, face_index, paint_object, paint_image, active_brush.color)
+            self.paint_particles(location, normal, face_index, active_brush.color)
+            self.update_paint_image()
+
+    def cache_paint_image(self, paint_image):
+        if self.paint_image!=paint_image:
+            self.paint_image = paint_image
+            self.paint_pixels = list(paint_image.pixels)
+
+    def update_paint_image(self):
+        if self.paint_image!=None:
+            self.paint_image.pixels[:] = self.paint_pixels
 
     def get_active_image(self, context):
         """ Get the active image for painting """
@@ -58,15 +73,16 @@ class Particles:
 
         return ray_origin,ray_direction
 
-    def ray_cast_on_object(self, obj, matrix, ray_origin, ray_direction):
+    def ray_cast_on_object(self, ray_origin, ray_direction):
         """Wrapper for ray casting that moves the ray into object space"""
 
         # get the ray relative to the object
-        matrix_inv = matrix.inverted()
+        matrix_inv = self.matrix.inverted()
         ray_origin_obj = matrix_inv @ ray_origin
         ray_direction_obj = matrix_inv.to_3x3() @ ray_direction
 
         # cast the ray
+        obj = self.paint_object
         success, location, normal, face_index = obj.ray_cast(ray_origin_obj, ray_direction_obj)
 
         if success:
@@ -74,9 +90,9 @@ class Particles:
         else:
             return None, None, None
 
-    def paint_particles(self, location, normal, face_index, paint_object, paint_image, color):
+    def paint_particles(self, location, normal, face_index, color):
         """ After ray casting paint onto the hit location """
-        mesh = paint_object.data
+        mesh = self.paint_object.data
         if (not mesh.polygons) or (face_index >= len(mesh.polygons)):
             print("ERROR: Can't find face")
             return
@@ -101,23 +117,20 @@ class Particles:
             if mathutils.geometry.intersect_point_tri(location,p0,p1,p2):
                 location_uv = mathutils.geometry.\
                     barycentric_transform(location, p0,p1,p2, uv0, uv1, uv2)
-                self.paint_particle(location_uv, mesh, paint_image, color)
+                self.paint_particle(location_uv, mesh, color)
     
-    def set_pixel(self, image, x,y, color):
+    def set_pixel(self, x,y, color):
         """ Set a single pixel in the image """
-        image_size = image.size
-        pixels = image.pixels
+        image_size = self.paint_image.size
         indx = (x+y*image_size[0])*4
-        pixels[indx+0] = color[0]
-        pixels[indx+1] = color[1]
-        pixels[indx+2] = color[2]
+        self.paint_pixels[indx+0] = color[0]
+        self.paint_pixels[indx+1] = color[1]
+        self.paint_pixels[indx+2] = color[2]
         
-    def paint_particle(self, uv, mesh, paint_image, color):
+    def paint_particle(self, uv, mesh, color):
         """ Paint a single particle """
-        image_size = paint_image.size
-        pixels = paint_image.pixels
+        image_size = self.paint_image.size
         x = int(uv[0]*image_size[0])
         y = int(uv[1]*image_size[1])
-        indx = (x+y*image_size[0])*4
-        self.set_pixel(paint_image, x,y, color)
+        self.set_pixel(x,y, color)
         
