@@ -7,6 +7,18 @@ import mathutils
 import math
 import random
 
+class Particle:
+    """ A single particle """
+    def __init__(self, location, normal, face_index):
+        self.location = location
+        self.normal = normal
+        self.face_index = face_index
+        self.age = 0.0
+
+    def move(self, offset):
+        self.location += offset
+        self.age += 1
+
 class Particles:
     """ A class managing the particle system for the paint operator """
     def __init__(self, context):
@@ -16,6 +28,8 @@ class Particles:
         self.matrix = self.paint_object.matrix_world.copy()
         self.paint_image = None
         self.paint_pixels = None
+        self.particles = []
+        self.max_age = 20.0
 
     def shoot(self, context, event):
         """ Shoot particles and paint them """
@@ -32,11 +46,33 @@ class Particles:
                                                              ray_direction)
 
         if location != None:
-            paint_image = self.get_active_image(context)
-            self.cache_paint_image(paint_image)
-            active_brush = self.get_active_brush(context)
-            self.paint_particles(location, normal, face_index, active_brush.color)
-            self.update_paint_image()
+            self.add_particle(Particle(location, normal, face_index))
+    
+    def move_particles(self):
+        """ Simulate gravity """
+        offset = mathutils.Vector((0,0,-0.005))
+        for i in range(len(self.particles) - 1, -1, -1):
+            p = self.particles[i]
+            p.move(offset)
+            if p.age > self.max_age:
+                self.particles[i] = self.particles[-1]
+                self.particles.pop()
+
+    
+    def paint_particles(self, context):
+        paint_image = self.get_active_image(context)
+        self.cache_paint_image(paint_image)
+        active_brush = self.get_active_brush(context)
+        for p in self.particles:
+            alpha = 1 - p.age / self.max_age
+            self.paint_particle(p.location, p.normal, p.face_index, active_brush.color, alpha)
+        self.update_paint_image()
+
+    def clear_particles(self):
+        self.particles = []
+
+    def add_particle(self, particle):
+        self.particles.append(particle)
 
     def cache_paint_image(self, paint_image):
         if self.paint_image!=paint_image:
@@ -90,7 +126,7 @@ class Particles:
         else:
             return None, None, None
 
-    def paint_particles(self, location, normal, face_index, color):
+    def paint_particle(self, location, normal, face_index, color, alpha):
         """ After ray casting paint onto the hit location """
         mesh = self.paint_object.data
         if (not mesh.polygons) or (face_index >= len(mesh.polygons)):
@@ -117,20 +153,19 @@ class Particles:
             if mathutils.geometry.intersect_point_tri(location,p0,p1,p2):
                 location_uv = mathutils.geometry.\
                     barycentric_transform(location, p0,p1,p2, uv0, uv1, uv2)
-                self.paint_particle(location_uv, mesh, color)
+                self.paint_uv(location_uv, mesh, color, alpha)
     
-    def set_pixel(self, x,y, color):
-        """ Set a single pixel in the image """
-        image_size = self.paint_image.size
-        indx = (x+y*image_size[0])*4
-        self.paint_pixels[indx+0] = color[0]
-        self.paint_pixels[indx+1] = color[1]
-        self.paint_pixels[indx+2] = color[2]
-        
-    def paint_particle(self, uv, mesh, color):
+    def paint_uv(self, uv, mesh, color, alpha):
         """ Paint a single particle """
         image_size = self.paint_image.size
         x = int(uv[0]*image_size[0])
         y = int(uv[1]*image_size[1])
-        self.set_pixel(x,y, color)
+        self.set_pixel(x,y, color, alpha)
         
+    def set_pixel(self, x,y, color, alpha):
+        """ Set a single pixel in the image """
+        image_size = self.paint_image.size
+        indx = (x+y*image_size[0])*4
+        self.paint_pixels[indx+0] = (1-alpha)*self.paint_pixels[indx+0] + alpha*color[0]
+        self.paint_pixels[indx+1] = (1-alpha)*self.paint_pixels[indx+1] + alpha*color[1]
+        self.paint_pixels[indx+2] = (1-alpha)*self.paint_pixels[indx+2] + alpha*color[2]

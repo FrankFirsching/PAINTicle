@@ -33,6 +33,8 @@ class PaintOperator(bpy.types.Operator):
         elif event.type == 'TIMER':
             if self._left_mouse_pressed:
                 self._particles.shoot(context, event)
+                self._particles.move_particles()
+                self._particles.paint_particles(context)
         elif event.type == 'LEFTMOUSE':
             # Track the mouse press state
             self._left_mouse_pressed = (event.value=="PRESS")
@@ -42,6 +44,7 @@ class PaintOperator(bpy.types.Operator):
                 self._timer = None
             if self._left_mouse_pressed:
                 self._timer = wm.event_timer_add(0.1, window=context.window)
+                self._particles.clear_particles()
             return {'RUNNING_MODAL'}
 
         elif event.type in {'ESC'}:
