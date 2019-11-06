@@ -69,20 +69,20 @@ class Particle:
                 self.face_index = index
                 self.update_uv(paint_mesh, False)
 
-    def stroke(self):
-        """ A future helper function to stroke the particle using built-in
-            stroking functionality of blender. This unfortunately needs a
-            different context, because our particle needs to paint in uv-space
-            not in 3D visible space """
+    def stroke(self, context):
+        # print("context:",context)
+        origin = context['region'].view2d.view_to_region(0,0)
+        upperLeft = context['region'].view2d.view_to_region(1,1)
+        scale = ( upperLeft[0]-origin[0], upperLeft[1]-origin[1] )
         myStroke=[ {"name":"ParticleStroke",
                     "is_start":False,
                     "location":[0,0,0],
-                    "mouse":[self.rnd.randrange(0,100),self.rnd.randrange(0,100)],
+                    "mouse":[self.uv[0]*scale[0]+origin[0],self.uv[1]*scale[1]+origin[1]],
                     "pen_flip":False,
                     "pressure":0.5,
                     "size":10,
                     "time":0 } ]
-        bpy.ops.paint.image_paint(stroke=myStroke)
+        bpy.ops.paint.image_paint(context, stroke=myStroke)
 
 class Particles:
     """ A class managing the particle system for the paint operator """
@@ -96,7 +96,24 @@ class Particles:
         self.particles = []
         self.max_age = 2.0
         self.img_painting_in_float = True
+        self.fakeUvContext=self.createFakeUvContext(context)
+        print(self.fakeUvContext)
 
+    def createFakeUvContext(self, context):
+        """ We fake a Uv context using a square aspect ratio, where we can paint
+            into """
+        screen = context.screen
+        fakedContext = context.copy()
+
+        # Update the context 
+        for area in screen.areas:
+            if area.type == 'IMAGE_EDITOR':
+                for region in area.regions:
+                    if region.type == 'WINDOW':
+                        fakedContext = {'region': region, 'area': area}
+
+        return fakedContext
+    
     def shoot(self, context, event):
         """ Shoot particles and paint them """
         paint_size = self.get_brush_size(context)
@@ -126,7 +143,7 @@ class Particles:
     def paint_particles(self, context):
         """ Paint all particles into the cached image """
         paint_image = self.get_active_image(context)
-        self.cache_paint_image(paint_image)
+        #self.cache_paint_image(paint_image)
         active_brush = self.get_active_brush(context)
         if False:
             # Native paint
@@ -138,7 +155,7 @@ class Particles:
             for p in self.particles:
                 alpha = 1 - p.age / self.max_age
                 self.paint_particle(p, active_brush.color, alpha)
-        self.update_paint_image(False)
+        #self.update_paint_image(False)
 
     def clear_particles(self):
         """ Start with an empty set of particles """
@@ -207,6 +224,8 @@ class Particles:
 
     def paint_particle(self, particle, color, alpha):
         """ After ray casting paint onto the hit location """
+        particle.stroke(self.fakeUvContext)
+        return
         uv = particle.get_uv()
         if uv!=None:
             self.paint_uv(uv, color, alpha)
