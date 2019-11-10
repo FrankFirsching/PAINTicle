@@ -70,17 +70,24 @@ class Particle:
                 self.update_uv(paint_mesh, False)
 
     def stroke(self, context):
-        # print("context:",context)
-        origin = context['region'].view2d.view_to_region(0,0)
-        upperLeft = context['region'].view2d.view_to_region(1,1)
+        region = context['region']
+        # Calculating from the region_to_view is more accurate, since
+        # view_to_region rounds to integers.
+        diffLength=min(region.width, region.height)
+        view00 = region.view2d.region_to_view(0,0)
+        view11 = region.view2d.region_to_view(diffLength,diffLength)
+        viewDiff = (view11[0]-view00[0], view11[1]-view00[1])
+        origin = (-view00[0]/viewDiff[0]*diffLength,-view00[1]/viewDiff[1]*diffLength)
+        upperLeft = ((1-view00[0])/viewDiff[0]*diffLength,(1-view00[1])/viewDiff[1]*diffLength)
         scale = ( upperLeft[0]-origin[0], upperLeft[1]-origin[1] )
+        mousePos = [self.uv[0]*scale[0]+origin[0],self.uv[1]*scale[1]+origin[1]]
         myStroke=[ {"name":"ParticleStroke",
                     "is_start":False,
                     "location":[0,0,0],
-                    "mouse":[self.uv[0]*scale[0]+origin[0],self.uv[1]*scale[1]+origin[1]],
+                    "mouse":mousePos,
                     "pen_flip":False,
                     "pressure":0.5,
-                    "size":10,
+                    "size":self.age,
                     "time":0 } ]
         bpy.ops.paint.image_paint(context, stroke=myStroke)
 
@@ -97,7 +104,6 @@ class Particles:
         self.max_age = 2.0
         self.img_painting_in_float = True
         self.fakeUvContext=self.createFakeUvContext(context)
-        print(self.fakeUvContext)
 
     def createFakeUvContext(self, context):
         """ We fake a Uv context using a square aspect ratio, where we can paint
