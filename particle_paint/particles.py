@@ -17,16 +17,24 @@ class Error(Exception):
 
 class Particle:
     """ A single particle """
-    def __init__(self, location, normal, face_index):
+    def __init__(self, location, normal, face_index, particle_settings):
         self.location = location
         self.normal = normal.normalized()
         self.face_index = face_index
-        self.age = 0.0
         self.speed = mathutils.Vector((0,0,0))
         self.mass = 50
         self.barycentric = mathutils.Vector((0,0,0))
         self.uv=mathutils.Vector((0,0,0))
         self.rnd = random.Random()
+        
+        random_size = self.rnd.uniform(-particle_settings.particle_size_random,
+                                        particle_settings.particle_size_random)
+        self.particle_size = particle_settings.particle_size+random_size
+
+        self.age = 0.0
+        random_age = self.rnd.uniform(-particle_settings.max_age_random,
+                                       particle_settings.max_age_random)
+        self.max_age = particle_settings.max_age + random_age
 
     def move(self, physics, paint_mesh, deltaT):
         orthoForce = physics.gravityNormalized.dot(self.normal) * self.normal
@@ -71,25 +79,30 @@ class Particle:
 
     def stroke(self, context):
         region = context['region']
-        # Calculating from the region_to_view is more accurate, since
-        # view_to_region rounds to integers.
-        diffLength=min(region.width, region.height)
-        view00 = region.view2d.region_to_view(0,0)
-        view11 = region.view2d.region_to_view(diffLength,diffLength)
-        viewDiff = (view11[0]-view00[0], view11[1]-view00[1])
-        origin = (-view00[0]/viewDiff[0]*diffLength,-view00[1]/viewDiff[1]*diffLength)
-        upperLeft = ((1-view00[0])/viewDiff[0]*diffLength,(1-view00[1])/viewDiff[1]*diffLength)
-        scale = ( upperLeft[0]-origin[0], upperLeft[1]-origin[1] )
-        mousePos = [self.uv[0]*scale[0]+origin[0],self.uv[1]*scale[1]+origin[1]]
+        mousePos = self.uvToMousePos(region, self.uv)
+        alpha = 1 - self.age / self.max_age
         myStroke=[ {"name":"ParticleStroke",
                     "is_start":False,
                     "location":[0,0,0],
                     "mouse":mousePos,
                     "pen_flip":False,
-                    "pressure":0.5,
-                    "size":self.age,
+                    "pressure":alpha,
+                    "size":self.particle_size,
                     "time":0 } ]
         bpy.ops.paint.image_paint(context, stroke=myStroke)
+
+    def uvToMousePos(self, region, uv):
+        """ Calculating a pixel position on the Image Editor for given UV
+            coordinate. We're usingthe region_to_view function, since it's more
+            accurate, as view_to_region rounds to integers. """
+        diffLength=min(region.width, region.height)
+        view00 = region.view2d.region_to_view(0, 0)
+        view11 = region.view2d.region_to_view(diffLength, diffLength)
+        viewDiff = ( view11[0]-view00[0], view11[1]-view00[1] )
+        origin = ( -view00[0]/viewDiff[0]*diffLength,-view00[1]/viewDiff[1]*diffLength )
+        upperLeft = ( (1-view00[0])/viewDiff[0]*diffLength,(1-view00[1])/viewDiff[1]*diffLength )
+        scale = ( upperLeft[0]-origin[0], upperLeft[1]-origin[1] )
+        return [ uv[0]*scale[0]+origin[0], uv[1]*scale[1]+origin[1] ]
 
 class Particles:
     """ A class managing the particle system for the paint operator """
@@ -101,7 +114,6 @@ class Particles:
         self.paint_image = None
         self.paint_pixels = None
         self.particles = []
-        self.max_age = 2.0
         self.img_painting_in_float = True
         self.fakeUvContext=self.createFakeUvContext(context)
 
@@ -120,7 +132,7 @@ class Particles:
 
         return fakedContext
     
-    def shoot(self, context, event):
+    def shoot(self, context, event, particle_settings):
         """ Shoot particles and paint them """
         paint_size = self.get_brush_size(context)
         angle = 2*math.pi*self.rnd.random()
@@ -134,14 +146,14 @@ class Particles:
         location,normal,face_index = self.ray_cast_on_object(ray_origin,
                                                              ray_direction)
         if location != None:
-            self.add_particle(Particle(location, normal, face_index))
+            self.add_particle(Particle(location, normal, face_index, particle_settings))
     
     def move_particles(self, physics, deltaT):
         """ Simulate gravity """
         for i in range(len(self.particles) - 1, -1, -1):
             p = self.particles[i]
             p.move(physics, self.paint_mesh, deltaT)
-            if p.age > self.max_age:
+            if p.age > p.max_age:
                 # Move last particle to this location and remove last entry
                 self.particles[i] = self.particles[-1]
                 self.particles.pop()
@@ -154,13 +166,11 @@ class Particles:
         if False:
             # Native paint
             particle_paint.native.paint(self.paint_image, self.paint_pixels,
-                                        self.particles, self.max_age,
-                                        active_brush.color)
+                                        self.particles, active_brush.color)
         else:
             # Python paint
             for p in self.particles:
-                alpha = 1 - p.age / self.max_age
-                self.paint_particle(p, active_brush.color, alpha)
+                self.paint_particle(p, active_brush.color)
         #self.update_paint_image(False)
 
     def clear_particles(self):
@@ -228,12 +238,13 @@ class Particles:
         else:
             return None, None, None
 
-    def paint_particle(self, particle, color, alpha):
+    def paint_particle(self, particle, color):
         """ After ray casting paint onto the hit location """
         particle.stroke(self.fakeUvContext)
         return
         uv = particle.get_uv()
         if uv!=None:
+            alpha = 1 - particle.age / particle.max_age
             self.paint_uv(uv, color, alpha)
 
     

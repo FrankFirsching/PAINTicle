@@ -1,6 +1,5 @@
 import bpy
 from mathutils import Vector
-from bpy.props import FloatVectorProperty
 
 import cProfile, pstats, io
 import time
@@ -37,12 +36,13 @@ class PaintOperator(bpy.types.Operator):
                 return {'RUNNING_MODAL'}
         elif event.type == 'TIMER':
             if self._left_mouse_pressed:
+                settings = context.scene.particle_paint_settings
                 deltaT = 0
                 currenttime = time.time_ns()
                 if self.lastcall!=0:
                     deltaT = (currenttime - self.lastcall) * 1e-9
                 self.lastcall = time.time_ns()
-                self._particles.shoot(context, event)
+                self._particles.shoot(context, event, settings)
                 self._particles.move_particles(self.physics, deltaT)
                 self._particles.paint_particles(context)
 

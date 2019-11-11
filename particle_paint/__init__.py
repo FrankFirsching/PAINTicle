@@ -12,6 +12,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import particle_paint.operator
+import particle_paint.settings
 import bpy
 
 bl_info = {
@@ -24,11 +25,20 @@ bl_info = {
     "category" : "Paint"
 }
 
+classes = (
+    particle_paint.operator.PaintOperator,
+    particle_paint.settings.Settings
+)
+
 def register():
-    bpy.utils.register_class(particle_paint.operator.PaintOperator)
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    bpy.types.Scene.particle_paint_settings = bpy.props.PointerProperty(type=particle_paint.settings.Settings)
 
 def unregister():
-    bpy.utils.unregister_class(particle_paint.operator.PaintOperator)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+    del bpy.types.Scene.particle_paint_settings
 
 if __name__ == "__main__":
     register()
