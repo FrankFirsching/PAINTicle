@@ -77,19 +77,18 @@ class Particle:
                 self.face_index = index
                 self.update_uv(paint_mesh, False)
 
-    def stroke(self, context):
+    def generateStroke(self, context):
         region = context['region']
         mousePos = self.uvToMousePos(region, self.uv)
         alpha = 1 - self.age / self.max_age
-        myStroke=[ {"name":"ParticleStroke",
+        return {"name":"ParticleStroke",
                     "is_start":False,
-                    "location":[0,0,0],
+                    "location":self.location,
                     "mouse":mousePos,
                     "pen_flip":False,
                     "pressure":alpha,
                     "size":self.particle_size,
-                    "time":0 } ]
-        bpy.ops.paint.image_paint(context, stroke=myStroke)
+                    "time":0 }
 
     def uvToMousePos(self, region, uv):
         """ Calculating a pixel position on the Image Editor for given UV
@@ -154,24 +153,12 @@ class Particles:
             p = self.particles[i]
             p.move(physics, self.paint_mesh, deltaT)
             if p.age > p.max_age:
-                # Move last particle to this location and remove last entry
-                self.particles[i] = self.particles[-1]
-                self.particles.pop()
+                del self.particles[i]
 
     def paint_particles(self, context):
-        """ Paint all particles into the cached image """
-        paint_image = self.get_active_image(context)
-        #self.cache_paint_image(paint_image)
-        active_brush = self.get_active_brush(context)
-        if False:
-            # Native paint
-            particle_paint.native.paint(self.paint_image, self.paint_pixels,
-                                        self.particles, active_brush.color)
-        else:
-            # Python paint
-            for p in self.particles:
-                self.paint_particle(p, active_brush.color)
-        #self.update_paint_image(False)
+        """ Paint all particles into the texture """
+        strokes = [p.generateStroke(self.fakeUvContext) for p in self.particles]
+        bpy.ops.paint.image_paint(self.fakeUvContext, stroke=strokes)
 
     def clear_particles(self):
         """ Start with an empty set of particles """
@@ -180,22 +167,6 @@ class Particles:
     def add_particle(self, particle):
         """ Add a single particle """
         self.particles.append(particle)
-
-    def cache_paint_image(self, paint_image):
-        """ We cache the blender image for performance reasons into a list """
-        if self.paint_image!=paint_image:
-            self.paint_image = paint_image
-            self.paint_pixels = list(paint_image.pixels)
-            self.img_used_float = self.paint_image.use_generated_float
-        if self.paint_image.is_float != self.img_painting_in_float:
-            self.paint_image.use_generated_float = self.img_painting_in_float
-
-    def update_paint_image(self, lastUpdate):
-        """ We cached the image into a list, need to sync back to blender """
-        if self.paint_image!=None:
-            if lastUpdate:
-                self.paint_image.use_generated_float = self.img_used_float
-            self.paint_image.pixels[:] = self.paint_pixels
 
     def get_active_image(self, context):
         """ Get the active image for painting """
@@ -237,28 +208,3 @@ class Particles:
             return location, normal, face_index
         else:
             return None, None, None
-
-    def paint_particle(self, particle, color):
-        """ After ray casting paint onto the hit location """
-        particle.stroke(self.fakeUvContext)
-        return
-        uv = particle.get_uv()
-        if uv!=None:
-            alpha = 1 - particle.age / particle.max_age
-            self.paint_uv(uv, color, alpha)
-
-    
-    def paint_uv(self, uv, color, alpha):
-        """ Paint a single particle """
-        image_size = self.paint_image.size
-        x = int(uv[0]*image_size[0])
-        y = int(uv[1]*image_size[1])
-        self.set_pixel(x,y, color, alpha)
-        
-    def set_pixel(self, x,y, color, alpha):
-        """ Set a single pixel in the image """
-        image_size = self.paint_image.size
-        indx = (x+y*image_size[0])*4
-        self.paint_pixels[indx+0] = (1-alpha)*self.paint_pixels[indx+0] + alpha*color[0]
-        self.paint_pixels[indx+1] = (1-alpha)*self.paint_pixels[indx+1] + alpha*color[1]
-        self.paint_pixels[indx+2] = (1-alpha)*self.paint_pixels[indx+2] + alpha*color[2]

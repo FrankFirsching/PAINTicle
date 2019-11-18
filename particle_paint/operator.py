@@ -50,7 +50,7 @@ class PaintOperator(bpy.types.Operator):
             # Track the mouse press state
             self._left_mouse_pressed = (event.value=="PRESS")
             wm = context.window_manager
-            if self._timer!=None: # Remove a potention other timer
+            if self._timer!=None: # Remove a potentially active timer
                 wm.event_timer_remove(self._timer)
                 self._timer = None
             if self._left_mouse_pressed:
@@ -59,7 +59,6 @@ class PaintOperator(bpy.types.Operator):
                 self.lastcall = time.time_ns()
                 self._particles.clear_particles()
             else:
-                self._particles.update_paint_image(True)
                 self.endProfile()
 
             return {'RUNNING_MODAL'}
