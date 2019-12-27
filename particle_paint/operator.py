@@ -5,7 +5,6 @@ import cProfile, pstats, io
 import time
 
 import particle_paint.particles
-import particle_paint.physics
 
 # This class is the blender operator interface. It cares about mouse and pen
 # handling. The real drawing is done in a different module: particles.
@@ -18,7 +17,6 @@ class PaintOperator(bpy.types.Operator):
     def __init__(self):
         """ Constructor """
         self._timer = None
-        self.physics = particle_paint.physics.Physics()
         self.lastcall = 0
         self.pr = None
     
@@ -43,7 +41,7 @@ class PaintOperator(bpy.types.Operator):
                     deltaT = (currenttime - self.lastcall) * 1e-9
                 self.lastcall = time.time_ns()
                 self._particles.shoot(context, event, settings)
-                self._particles.move_particles(self.physics, deltaT)
+                self._particles.move_particles(settings.physics, deltaT)
                 self._particles.paint_particles(context)
 
         elif event.type == 'LEFTMOUSE':

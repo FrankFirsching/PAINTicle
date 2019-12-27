@@ -13,6 +13,7 @@
 
 import particle_paint.operator
 import particle_paint.settings
+import particle_paint.panel
 import bpy
 
 bl_info = {
@@ -27,7 +28,10 @@ bl_info = {
 
 classes = (
     particle_paint.operator.PaintOperator,
-    particle_paint.settings.Settings
+    particle_paint.physics.Physics,
+    particle_paint.settings.Settings,
+    particle_paint.panel.ParticlePaintMainPanel,
+    particle_paint.panel.ParticlePaintPhysicsPanel
 )
 
 def register():
