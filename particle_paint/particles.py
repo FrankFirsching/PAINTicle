@@ -36,6 +36,12 @@ class Particle:
                                        particle_settings.max_age_random)
         self.max_age = particle_settings.max_age + random_age
 
+        self.colorOffset = [0,0,0]
+        colRand = particle_settings.color_random
+        self.colorOffset[0] = self.rnd.uniform(-colRand.h, colRand.h)
+        self.colorOffset[1] = self.rnd.uniform(-colRand.s, colRand.s)
+        self.colorOffset[2] = self.rnd.uniform(-colRand.v, colRand.v)
+
     def move(self, physics, paint_mesh, deltaT):
         orthoForce = physics.gravityNormalized.dot(self.normal) * self.normal
         planeForce = physics.gravity - orthoForce
@@ -81,14 +87,14 @@ class Particle:
         region = context['region']
         mousePos = self.uvToMousePos(region, self.uv)
         alpha = 1 - self.age / self.max_age
-        return {"name":"ParticleStroke",
-                    "is_start":False,
-                    "location":self.location,
-                    "mouse":mousePos,
-                    "pen_flip":False,
-                    "pressure":alpha,
-                    "size":self.particle_size,
-                    "time":0 }
+        return { "name":"ParticleStroke",
+                 "is_start":False,
+                 "location":self.location,
+                 "mouse":mousePos,
+                 "pen_flip":False,
+                 "pressure":alpha,
+                 "size":self.particle_size,
+                 "time":0 }
 
     def uvToMousePos(self, region, uv):
         """ Calculating a pixel position on the Image Editor for given UV
@@ -157,8 +163,21 @@ class Particles:
 
     def paint_particles(self, context):
         """ Paint all particles into the texture """
-        strokes = [p.generateStroke(self.fakeUvContext) for p in self.particles]
-        bpy.ops.paint.image_paint(self.fakeUvContext, stroke=strokes)
+        paintAllAtOnce = False
+        if paintAllAtOnce:
+            # WARNING: paintAllAtOnce can't handle color variation
+            strokes = [p.generateStroke(self.fakeUvContext) for p in self.particles]
+            bpy.ops.paint.image_paint(self.fakeUvContext, stroke=strokes)
+        else:
+            brush = self.get_active_brush(context)
+            oldBrushColor = brush.color.copy()
+            for p in self.particles:
+                stroke = [p.generateStroke(self.fakeUvContext)]
+                brush.color.h = oldBrushColor.h+p.colorOffset[0]
+                brush.color.s = oldBrushColor.s+p.colorOffset[1]
+                brush.color.v = oldBrushColor.v+p.colorOffset[2]
+                bpy.ops.paint.image_paint(self.fakeUvContext, stroke=stroke)
+            brush.color = oldBrushColor
 
     def clear_particles(self):
         """ Start with an empty set of particles """

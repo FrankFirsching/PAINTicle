@@ -25,6 +25,7 @@ class ParticlePaintMainPanel(ParticlePaintPanel, bpy.types.Panel):
         layout.prop(settings, "particle_size_random")
         layout.prop(settings, "max_age")
         layout.prop(settings, "max_age_random")
+        layout.prop(settings, "color_random")
 
 class ParticlePaintPhysicsPanel(ParticlePaintPanel, bpy.types.Panel):
     """ A sub panel grouping the physics settings """
