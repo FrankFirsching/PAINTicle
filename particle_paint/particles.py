@@ -83,7 +83,7 @@ class Particle:
                 self.face_index = index
                 self.update_uv(paint_mesh, False)
 
-    def generateStroke(self, context):
+    def generateStroke(self, context, overallStrength):
         region = context['region']
         mousePos = self.uvToMousePos(region, self.uv)
         alpha = 1 - self.age / self.max_age
@@ -92,7 +92,7 @@ class Particle:
                  "location":self.location,
                  "mouse":mousePos,
                  "pen_flip":False,
-                 "pressure":alpha,
+                 "pressure":alpha*overallStrength,
                  "size":self.particle_size,
                  "time":0 }
 
@@ -164,15 +164,16 @@ class Particles:
     def paint_particles(self, context):
         """ Paint all particles into the texture """
         paintAllAtOnce = False
+        brush = self.get_active_brush(context)
+        strength = brush.strength
         if paintAllAtOnce:
             # WARNING: paintAllAtOnce can't handle color variation
-            strokes = [p.generateStroke(self.fakeUvContext) for p in self.particles]
+            strokes = [p.generateStroke(self.fakeUvContext, strength) for p in self.particles]
             bpy.ops.paint.image_paint(self.fakeUvContext, stroke=strokes)
         else:
-            brush = self.get_active_brush(context)
             oldBrushColor = brush.color.copy()
             for p in self.particles:
-                stroke = [p.generateStroke(self.fakeUvContext)]
+                stroke = [p.generateStroke(self.fakeUvContext, strength)]
                 brush.color.h = oldBrushColor.h+p.colorOffset[0]
                 brush.color.s = oldBrushColor.s+p.colorOffset[1]
                 brush.color.v = oldBrushColor.v+p.colorOffset[2]
