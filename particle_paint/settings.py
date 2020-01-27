@@ -1,4 +1,5 @@
 from bpy.props import FloatProperty
+from bpy.props import BoolProperty
 from bpy.props import FloatVectorProperty
 from bpy.props import PointerProperty
 from bpy.types import PropertyGroup
@@ -26,6 +27,10 @@ class Settings(PropertyGroup):
                                       description="The color variation of an individual particle applied in HSV mode.",
                                       subtype="COLOR_GAMMA", min=0, max=1,
                                       options=set())
+    stop_painting_on_mouse_release: BoolProperty(name="Stop on mouse release",
+                                  description="If set to true, the particles immediately stop after painting.",
+                                  default=False,
+                                  options=set())
     physics: PointerProperty(type=Physics, name="Physics",
                              description="The physical properties of the simulation",
                              options=set())

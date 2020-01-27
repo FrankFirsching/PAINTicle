@@ -13,6 +13,8 @@ class PaintOperator(bpy.types.Operator):
     """Paint on the object using particles"""
     bl_idname = "view3d.particle_paint"
     bl_label = "Particle Paint"
+    bl_options = {'UNDO_GROUPED'}
+    bl_undo_group = "ParticlePaint"
 
     def __init__(self):
         """ Constructor """
@@ -20,11 +22,16 @@ class PaintOperator(bpy.types.Operator):
         self.lastcall = 0
         self.pr = None
     
+    @classmethod
+    def poll(cls, context):
+        # TODO: Check when to allow activation of operator
+        return True
+    
     def modal(self, context, event):
         """ Callback, if some event was happening """
 
         mouseOutsideOfArea = self.isMouseOutsideOfArea(context.area, event)
-        if not self._left_mouse_pressed and mouseOutsideOfArea:
+        if not self._left_mouse_pressed and mouseOutsideOfArea and event.type!='TIMER':
             # Ignore everything, if not painting and outside
             return {'PASS_THROUGH'}
 
@@ -33,30 +40,32 @@ class PaintOperator(bpy.types.Operator):
                 # Keep the tool running
                 return {'RUNNING_MODAL'}
         elif event.type == 'TIMER':
+            settings = context.scene.particle_paint_settings
+            deltaT = 0
+            currenttime = time.time_ns()
+            if self.lastcall!=0:
+                deltaT = (currenttime - self.lastcall) * 1e-9
+            self.lastcall = time.time_ns()
             if self._left_mouse_pressed:
-                settings = context.scene.particle_paint_settings
-                deltaT = 0
-                currenttime = time.time_ns()
-                if self.lastcall!=0:
-                    deltaT = (currenttime - self.lastcall) * 1e-9
-                self.lastcall = time.time_ns()
                 self._particles.shoot(context, event, settings)
-                self._particles.move_particles(settings.physics, deltaT)
-                self._particles.paint_particles(context)
+            self._particles.move_particles(settings.physics, deltaT)
+            self._particles.paint_particles(context)
+            if not settings.stop_painting_on_mouse_release and not self._left_mouse_pressed:
+                if self._particles.numParticles() == 0:
+                    self.setTimer(context, False)
 
         elif event.type == 'LEFTMOUSE':
             # Track the mouse press state
             self._left_mouse_pressed = (event.value=="PRESS")
-            wm = context.window_manager
-            if self._timer!=None: # Remove a potentially active timer
-                wm.event_timer_remove(self._timer)
-                self._timer = None
             if self._left_mouse_pressed:
                 self.startProfile()
-                self._timer = wm.event_timer_add(0.01, window=context.window)
+                self.setTimer(context, True)
                 self.lastcall = time.time_ns()
                 self._particles.clear_particles()
             else:
+                settings = context.scene.particle_paint_settings
+                if settings.stop_painting_on_mouse_release:
+                    self.setTimer(context, False)
                 self.endProfile()
 
             return {'RUNNING_MODAL'}
@@ -64,12 +73,19 @@ class PaintOperator(bpy.types.Operator):
         elif event.type in {'ESC'}:
             # We end the tool with a right click
             context.area.header_text_set(None)
-            if self._timer!=None: # Remove a potential active timer
-                wm.event_timer_remove(self._timer)
-                self._timer = None
+            self.setTimer(context, False)
             return {'FINISHED'}
 
         return {'PASS_THROUGH'}
+
+    def setTimer(self, context, onOff):
+        wm = context.window_manager
+        if self._timer!=None: # Remove a potentially active timer
+            wm.event_timer_remove(self._timer)
+        if onOff:
+            self._timer = wm.event_timer_add(0.01, window=context.window)
+        else:
+            self._timer = None
 
     def startProfile(self):
         if self.pr==None:

@@ -2,6 +2,7 @@
 # neighbors of a triangle
 
 import bpy
+from particle_paint.utils import Error
 
 class TriangleMesh:
     def __init__(self, object):

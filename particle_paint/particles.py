@@ -10,10 +10,7 @@ import random
 import particle_paint.physics
 import particle_paint.trianglemesh
 import particle_paint.native
-
-class Error(Exception):
-    """ Base class for errors in this module """
-    pass
+from particle_paint.utils import Error
 
 class Particle:
     """ A single particle """
@@ -112,15 +109,15 @@ class Particle:
 class Particles:
     """ A class managing the particle system for the paint operator """
     def __init__(self, context):
-        pass
         self.rnd = random.Random()
         self.paint_mesh = particle_paint.trianglemesh.TriangleMesh(context.active_object)
         self.matrix = self.paint_mesh.object.matrix_world.copy()
-        self.paint_image = None
-        self.paint_pixels = None
         self.particles = []
-        self.img_painting_in_float = True
         self.fakeUvContext=self.createFakeUvContext(context)
+
+    def numParticles(self):
+        """ Return the number of simulated particles """
+        return len(self.particles)
 
     def createFakeUvContext(self, context):
         """ We fake a Uv context using a square aspect ratio, where we can paint
