@@ -13,31 +13,38 @@ import particle_paint.native
 from particle_paint.utils import Error
 
 class Particle:
+    nextParticleId = 0
+    rnd = random.Random()
+
     """ A single particle """
-    def __init__(self, location, normal, face_index, particle_settings):
+    def __init__(self, location, tri_index, paint_mesh, particle_settings):
+        self.id = Particle.nextParticleId
+        Particle.nextParticleId += 1
         self.location = location
-        self.normal = normal.normalized()
-        self.face_index = face_index
+        self.tri_index = tri_index
         self.speed = mathutils.Vector((0,0,0))
         self.mass = 50
         self.barycentric = mathutils.Vector((0,0,0))
+        self.normal = mathutils.Vector((0,0,0))
         self.uv=mathutils.Vector((0,0,0))
-        self.rnd = random.Random()
         
-        random_size = self.rnd.uniform(-particle_settings.particle_size_random,
-                                        particle_settings.particle_size_random)
+        rnd = Particle.rnd
+        random_size = rnd.uniform(-particle_settings.particle_size_random,
+                                   particle_settings.particle_size_random)
         self.particle_size = particle_settings.particle_size+random_size
 
         self.age = 0.0
-        random_age = self.rnd.uniform(-particle_settings.max_age_random,
-                                       particle_settings.max_age_random)
+        random_age = rnd.uniform(-particle_settings.max_age_random,
+                                  particle_settings.max_age_random)
         self.max_age = particle_settings.max_age + random_age
 
         self.colorOffset = [0,0,0]
         colRand = particle_settings.color_random
-        self.colorOffset[0] = self.rnd.uniform(-colRand.h, colRand.h)
-        self.colorOffset[1] = self.rnd.uniform(-colRand.s, colRand.s)
-        self.colorOffset[2] = self.rnd.uniform(-colRand.v, colRand.v)
+        self.colorOffset[0] = rnd.uniform(-colRand.h, colRand.h)
+        self.colorOffset[1] = rnd.uniform(-colRand.s, colRand.s)
+        self.colorOffset[2] = rnd.uniform(-colRand.v, colRand.v)
+        
+        self.update_location_dependent_properties(paint_mesh)
 
     def move(self, physics, paint_mesh, deltaT):
         orthoForce = physics.gravityNormalized.dot(self.normal) * self.normal
@@ -45,40 +52,41 @@ class Particle:
         self.speed += deltaT*planeForce/self.mass
         self.location += deltaT*self.speed
         self.age += deltaT
-        self.update_uv(paint_mesh)
+        self.update_location_dependent_properties(paint_mesh)
 
     def get_uv(self):
         return self.uv
 
-    def update_uv(self, paint_mesh, whenOutsideSearchNewFace=True):
+    def update_location_dependent_properties(self, paint_mesh):
+        self.project_back_to_triangle(paint_mesh)
+        self.barycentric = paint_mesh.barycentrics(self.location, self.tri_index)
+
         mesh = paint_mesh.mesh
-        if self.face_index >= len(mesh.polygons):
-            raise Error("ERROR: Particle is lying on a wrong face")
+        tri = mesh.loop_triangles[self.tri_index]
+        n = [mesh.vertices[i].normal for i in tri.vertices]
 
-        #face = mesh.polygons[self.face_index]
+        uvMap = mesh.uv_layers.active
+        uv = [uvMap.data[i].uv.copy() for i in tri.loops]
 
-        uvMap = mesh.uv_layers.active # ['UVMap']
-
-        tessellated = paint_mesh.poly_to_tri[self.face_index]
-        for tri_index in tessellated:
-            tri = mesh.loop_triangles[tri_index]
-            p = [mesh.vertices[i].co  for i in tri.vertices]
-            uv = [uvMap.data[i].uv.copy() for i in tri.loops]
+        if all(coord>0 for coord in self.barycentric):
+            # If we're within the triangle...
             uv[0].resize_3d()
             uv[1].resize_3d()
             uv[2].resize_3d()
-            if mathutils.geometry.intersect_point_tri(self.location,p[0],p[1],p[2]):
-                self.uv = mathutils.geometry.\
-                    barycentric_transform(self.location, p[0],p[1],p[2], uv[0], uv[1], uv[2])
-                return
-        # Here we haven't found any uv, so we probably have left the face
-        if whenOutsideSearchNewFace:
-            result, location, normal, index = paint_mesh.object.closest_point_on_mesh(self.location)
-            if result:
-                self.location = location
-                self.normal = normal
-                self.face_index = index
-                self.update_uv(paint_mesh, False)
+            uvx = paint_mesh.barycentrics(self.location, self.tri_index,
+                                          uv[0], uv[1], uv[2])
+            self.uv = uvx.resized(2)
+            self.normal = paint_mesh.barycentrics(self.location, self.tri_index,
+                                                  n[0], n[1], n[2])
+            self.normal.normalize()
+
+    def project_back_to_triangle(self, paint_mesh):
+        # Put the particle back to the triangle surface
+        result, location, normal, index = paint_mesh.object.closest_point_on_mesh(self.location)
+        if result:
+            self.location = location
+            self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
+        return result
 
     def generateStroke(self, context, overallStrength):
         region = context['region']
@@ -148,7 +156,8 @@ class Particles:
         location,normal,face_index = self.ray_cast_on_object(ray_origin,
                                                              ray_direction)
         if location != None:
-            self.add_particle(Particle(location, normal, face_index, particle_settings))
+            tri_index = self.paint_mesh.triangle_for_point_on_poly(location, face_index)
+            self.add_particle(Particle(location, tri_index, self.paint_mesh, particle_settings))
     
     def move_particles(self, physics, deltaT):
         """ Simulate gravity """
