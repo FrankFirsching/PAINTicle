@@ -82,11 +82,19 @@ class Particle:
 
     def project_back_to_triangle(self, paint_mesh):
         # Put the particle back to the triangle surface
-        result, location, normal, index = paint_mesh.object.closest_point_on_mesh(self.location)
-        if result:
-            self.location = location
-            self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
-        return result
+        if True: # Use triangle neighbor info movement
+            new_location = \
+                paint_mesh.project_point_to_triangle(self.location, self.tri_index)
+            
+            new_location,new_tri_index = \
+                paint_mesh.move_over_triangle_boundaries(self.location, new_location, self.tri_index)
+            self.location = new_location
+            self.tri_index = new_tri_index
+        else:
+            result, location, normal, index = paint_mesh.object.closest_point_on_mesh(self.location)
+            if result:
+                self.location = location
+                self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
 
     def generateStroke(self, context, overallStrength):
         region = context['region']
@@ -192,6 +200,8 @@ class Particles:
 
     def add_particle(self, particle):
         """ Add a single particle """
+        #if len(self.particles)>0:
+        #    return
         self.particles.append(particle)
 
     def get_active_image(self, context):

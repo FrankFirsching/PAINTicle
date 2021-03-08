@@ -43,6 +43,34 @@ class TriangleMesh:
                     barycentric_transform(p, tri_p[0],tri_p[1],tri_p[2],
                                           b0, b1, b2)
 
+    def project_point_to_triangle(self, p, tri_index):
+        tri = self.mesh.loop_triangles[tri_index]
+        tri_p = [self.mesh.vertices[i].co  for i in tri.vertices]
+        n = tri.normal
+        v = tri_p[0]-p
+        offset = v.project(n)
+        p_new = p+offset
+        return p_new
+
+    def move_over_triangle_boundaries(self, old_p, p, tri_index):
+        # we should wrap the distance old_p -> p onto the mesh and not just
+        # project p onto the next triangle
+        baries = self.barycentrics(p, tri_index)
+        visited_triangles = set()
+        while not all(bary>0 for bary in baries) and \
+              not tri_index in visited_triangles:
+            visited_triangles.add(tri_index)
+            neighbors = self.neighbors[tri_index]
+            if baries[0]<0:
+                tri_index = neighbors[1]//3
+            elif baries[1]<0:
+                tri_index = neighbors[2]//3
+            else:
+                tri_index = neighbors[0]//3
+            p = self.project_point_to_triangle(p, tri_index)
+            baries = self.barycentrics(p, tri_index)
+        return p,tri_index
+
     def build_poly_maps(self):
         """ Builds 2 maps, that allow mapping from triangles to polygons and
             vice versa. """
