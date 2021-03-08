@@ -9,7 +9,6 @@ import random
 
 import particle_paint.physics
 import particle_paint.trianglemesh
-import particle_paint.native
 from particle_paint.utils import Error
 
 class Particle:
@@ -107,7 +106,10 @@ class Particle:
                  "pen_flip":False,
                  "pressure":alpha*overallStrength,
                  "size":self.particle_size,
-                 "time":0 }
+                 "time":0,
+                 "mouse_event": mousePos,
+                 "x_tilt": 0,
+                 "y_tilt": 0 }
 
     def uvToMousePos(self, region, uv):
         """ Calculating a pixel position on the Image Editor for given UV
