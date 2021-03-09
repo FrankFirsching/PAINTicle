@@ -26,6 +26,6 @@ if args.cov:
     config["coverage"] = args.cov
     config["pytest_args"] = "--cov-config="+os.path.join(script_dir, "coveragerc")
 else:
-    config["pytest_args"] = "--capture=no"
+    config["pytest_args"] = "-rx"
 
 blender_addon_tester.test_blender_addon(addon_path=os.path.abspath(addon_path), blender_revision=args.rev, config=config )
