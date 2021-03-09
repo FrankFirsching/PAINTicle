@@ -21,6 +21,7 @@ bl_info = {
     "author" : "Frank Firsching",
     "description" : "Paint textures using particle systems",
     "blender" : (2, 80, 0),
+    "version": (0, 1, 0),
     "location" : "",
     "warning" : "",
     "category" : "Paint"
