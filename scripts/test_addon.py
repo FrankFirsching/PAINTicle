@@ -7,6 +7,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Unit test starter for particle_paint blender addon.')
 parser.add_argument('--cov', help="Perform code coverage", action='store_true')
+parser.add_argument('--dbg', help="When debugging don't capture at all", action='store_true')
 parser.add_argument('--rev', help="Specify the blender revision for the test environment (default=2.92)", default="2.92")
 args = parser.parse_args()
 
@@ -26,6 +27,6 @@ if args.cov:
     config["coverage"] = args.cov
     config["pytest_args"] = "--cov-config="+os.path.join(script_dir, "coveragerc")
 else:
-    config["pytest_args"] = "-rx"
+    config["pytest_args"] = "--capture=no" if args.dbg else "-rx"
 
 blender_addon_tester.test_blender_addon(addon_path=os.path.abspath(addon_path), blender_revision=args.rev, config=config )
