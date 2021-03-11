@@ -8,6 +8,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Unit test starter for particle_paint blender addon.')
 parser.add_argument('--cov', help="Perform code coverage", action='store_true')
 parser.add_argument('--dbg', help="When debugging don't capture at all", action='store_true')
+parser.add_argument('--ui', help="Allow some UI related tests, by not running blender in -b mode", action='store_true')
 parser.add_argument('--rev', help="Specify the blender revision for the test environment (default=2.92)", default="2.92")
 args = parser.parse_args()
 
@@ -22,7 +23,10 @@ os.chdir(tests_results_path)
 if not 'BLENDER_CACHE' in os.environ:
     os.environ['BLENDER_CACHE'] = os.path.join(tests_results_path, "blender_cache")
 
-config = { }
+config = {
+    "run_in_window": args.ui
+}
+
 if args.cov:
     config["coverage"] = args.cov
     config["pytest_args"] = "--cov-config="+os.path.join(script_dir, "coveragerc")
