@@ -14,3 +14,11 @@ def open_file(filename):
     script_dir = os.path.dirname(os.path.realpath(__file__))
     fullpath = os.path.join(script_dir, "testdata", filename)
     bpy.ops.wm.open_mainfile(filepath=fullpath)
+
+def has_ui():
+    """ Returns true, if blender supports running UI functionality, like creating GPU buffers """
+    return not bpy.app.background
+
+def no_ui():
+    """ Returns true, if blender is running without UI functionality """
+    return bpy.app.background
