@@ -20,7 +20,7 @@ os.chdir(tests_results_path)
 
 # Passing the cache dir through the config doesn't work, due to a strange test for unknown keys.
 # If the user doesn't override the cache location, constrain the caching inside of our addon's directory.
-if not 'BLENDER_CACHE' in os.environ:
+if 'BLENDER_CACHE' not in os.environ:
     os.environ['BLENDER_CACHE'] = os.path.join(tests_results_path, "blender_cache")
 
 config = {
@@ -33,4 +33,5 @@ if args.cov:
 else:
     config["pytest_args"] = "--capture=no" if args.dbg else "-rx"
 
-blender_addon_tester.test_blender_addon(addon_path=os.path.abspath(addon_path), blender_revision=args.rev, config=config )
+blender_addon_tester.test_blender_addon(addon_path=os.path.abspath(addon_path),
+                                        blender_revision=args.rev, config=config)

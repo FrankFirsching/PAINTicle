@@ -1,12 +1,19 @@
 # Generic blender gpu addons
 
-import gpu
+import bpy
+import os
+import numpy as np
+
+from . import dependencies
+
+import moderngl
 
 def image_sizes(image):
     """ Thus function shall return all images sizes of all UDIM tiles. However
         currently blender doesn't allow access to the tiles, except their names.
         So we can only work with untiles images """
-    return [image.size]
+    return [image.size] if image is not None else [(0,0)]
+
 
 def max_image_size(image):
     """ Thus function shall return the combined maximum images size of all UDIM tiles. However
@@ -17,6 +24,60 @@ def max_image_size(image):
     height = max([s[1] for s in sizes])
     return width, height
 
-def gpu_buffer_for_image(image):
+
+def gpu_framebuffer_for_image(image, glcontext: moderngl.Context):
     size = max_image_size(image)
-    return gpu.types.GPUOffScreen(size[0], size[1])
+    return gpu_simple_framebuffer(size, glcontext)
+
+
+def gpu_simple_framebuffer(size, glcontext: moderngl.Context) -> moderngl.Framebuffer:
+    #color_attachment = glcontext.renderbuffer(size)
+    color_attachment = glcontext.texture(size, components=4, dtype="f4")
+    return glcontext.framebuffer(color_attachment)
+
+
+def load_shader_source(shader_name: str, stage: str) -> str:
+    """ Loads the shader source from the addon's resources directory. Possible stages are
+        * 'vert' = vertex shader
+        * 'geom' = geometry shader
+        * 'frag' = fragment shader
+    """
+    basepath = os.path.dirname(os.path.realpath(__file__))
+    full_file_name = os.path.join(basepath, "shaders", shader_name+"_"+stage+".glsl")
+    if not os.path.exists(full_file_name):
+        return None
+    with open(full_file_name) as f:
+        return f.read()
+
+
+def load_shader(shader_name, glcontext: moderngl.Context) -> moderngl.Program:
+    """ Load all shaders for a given shader name """
+    vertex_shader = load_shader_source(shader_name, "vert")
+    geometry_shader = load_shader_source(shader_name, "geom")
+    fragment_shader = load_shader_source(shader_name, "frag")
+    program = glcontext.program(vertex_shader=vertex_shader,
+                                fragment_shader=fragment_shader,
+                                geometry_shader=geometry_shader)
+    return program
+
+
+def read_pixel_data_from_framebuffer(width, height, framebuffer: moderngl.Framebuffer):
+    """ Read the pixel from the current back buffer """
+    buffer = np.empty(width*height*4, np.float32)
+    framebuffer.read_into(buffer, components=4, dtype='f4')
+    return buffer
+
+
+def save_pixels(filepath, pixel_data, width, height):
+    """ Save an image given by pixels, e.g. read from the back buffer """
+    image = bpy.data.images.new("paticle_paint_temp", width, height, alpha=True)
+    image.filepath = filepath
+    image.pixels.foreach_set(pixel_data)
+    image.save()
+    bpy.data.images.remove(image)
+
+def trigger_redraw():
+    """ Triggers a redraw in all image and 3D views """
+    for area in bpy.context.screen.areas:
+        if area.type in ['IMAGE_EDITOR', 'VIEW_3D']:
+            area.tag_redraw()

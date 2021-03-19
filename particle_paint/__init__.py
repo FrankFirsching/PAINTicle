@@ -11,39 +11,46 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import particle_paint.operator
-import particle_paint.settings
-import particle_paint.panel
+from . import operator
+from . import settings
+from . import panel
+from . import physics
+from . import preferences_panel
+from . import utils
 import bpy
 
 bl_info = {
-    "name" : "ParticlePaint",
-    "author" : "Frank Firsching",
-    "description" : "Paint textures using particle systems",
-    "blender" : (2, 80, 0),
+    "name": "ParticlePaint",
+    "author": "Frank Firsching",
+    "description": "Paint textures using particle systems",
+    "blender": (2, 80, 0),
     "version": (0, 1, 0),
-    "location" : "",
-    "warning" : "",
-    "category" : "Paint"
+    "location": "",
+    "warning": "",
+    "category": "Paint"
 }
 
 classes = (
-    particle_paint.operator.PaintOperator,
-    particle_paint.physics.Physics,
-    particle_paint.settings.Settings,
-    particle_paint.panel.ParticlePaintMainPanel,
-    particle_paint.panel.ParticlePaintPhysicsPanel
+    operator.PaintOperator,
+    physics.Physics,
+    settings.Settings,
+    panel.ParticlePaintMainPanel,
+    panel.ParticlePaintPhysicsPanel,
+    preferences_panel.PreferencesPanel
 )
+
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.particle_paint_settings = bpy.props.PointerProperty(type=particle_paint.settings.Settings)
+    bpy.types.Scene.particle_paint_settings = bpy.props.PointerProperty(type=settings.Settings)
+
 
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     del bpy.types.Scene.particle_paint_settings
+
 
 if __name__ == "__main__":
     register()

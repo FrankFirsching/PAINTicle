@@ -1,6 +1,7 @@
 import pytest
 import bpy
-import mathutils    
+
+import moderngl
 
 from particle_paint import gpu_utils
 
@@ -28,13 +29,14 @@ def test_texture_size_udim(test_mesh):
     image = test_mesh.active_material.node_tree.nodes['myUDIM'].image
     image_sizes = gpu_utils.image_sizes(image)
     assert len(image_sizes) == 2
-    assert image_sizes[0][:] == (1024,512)
-    assert image_sizes[1][:] == (256,1024)
+    assert image_sizes[0][:] == (1024, 512)
+    assert image_sizes[1][:] == (256, 1024)
 
 
 @pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
 def test_offscreen_creation_from_image(test_mesh):
     image = test_mesh.active_material.node_tree.nodes['myUntiledImage'].image
-    buffer = gpu_utils.gpu_buffer_for_image(image)
+    glcontext = moderngl.create_context()
+    buffer = gpu_utils.gpu_framebuffer_for_image(image, glcontext)
     assert buffer.width == 1024
     assert buffer.height == 512

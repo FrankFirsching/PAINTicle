@@ -7,9 +7,11 @@ import mathutils
 import math
 import random
 
-import particle_paint.physics
-import particle_paint.trianglemesh
-from particle_paint.utils import Error
+from . import physics
+from . import trianglemesh
+from .utils import Error
+from . import particle_painter_gpu
+
 
 class Particle:
     nextParticleId = 0
@@ -21,11 +23,11 @@ class Particle:
         Particle.nextParticleId += 1
         self.location = location
         self.tri_index = tri_index
-        self.speed = mathutils.Vector((0,0,0))
+        self.speed = mathutils.Vector((0, 0, 0))
         self.mass = 50
-        self.barycentric = mathutils.Vector((0,0,0))
-        self.normal = mathutils.Vector((0,0,0))
-        self.uv=mathutils.Vector((0,0,0))
+        self.barycentric = mathutils.Vector((0, 0, 0))
+        self.normal = mathutils.Vector((0, 0, 0))
+        self.uv = mathutils.Vector((0, 0))
         
         rnd = Particle.rnd
         random_size = rnd.uniform(-particle_settings.particle_size_random,
@@ -37,7 +39,7 @@ class Particle:
                                   particle_settings.max_age_random)
         self.max_age = particle_settings.max_age + random_age
 
-        self.colorOffset = [0,0,0]
+        self.colorOffset = [0, 0, 0]
         colRand = particle_settings.color_random
         self.colorOffset[0] = rnd.uniform(-colRand.h, colRand.h)
         self.colorOffset[1] = rnd.uniform(-colRand.s, colRand.s)
@@ -67,7 +69,7 @@ class Particle:
         uvMap = mesh.uv_layers.active
         uv = [uvMap.data[i].uv.copy() for i in tri.loops]
 
-        if all(coord>0 for coord in self.barycentric):
+        if all(coord > 0 for coord in self.barycentric):
             # If we're within the triangle...
             uv[0].resize_3d()
             uv[1].resize_3d()
@@ -81,11 +83,11 @@ class Particle:
 
     def project_back_to_triangle(self, paint_mesh):
         # Put the particle back to the triangle surface
-        if True: # Use triangle neighbor info movement
+        if True:  # Use triangle neighbor info movement
             new_location = \
                 paint_mesh.project_point_to_triangle(self.location, self.tri_index)
             
-            new_location,new_tri_index = \
+            new_location, new_tri_index = \
                 paint_mesh.move_over_triangle_boundaries(self.location, new_location, self.tri_index)
             self.location = new_location
             self.tri_index = new_tri_index
@@ -115,42 +117,27 @@ class Particle:
         """ Calculating a pixel position on the Image Editor for given UV
             coordinate. We're usingthe region_to_view function, since it's more
             accurate, as view_to_region rounds to integers. """
-        diffLength=min(region.width, region.height)
+        diffLength = min(region.width, region.height)
         view00 = region.view2d.region_to_view(0, 0)
         view11 = region.view2d.region_to_view(diffLength, diffLength)
-        viewDiff = ( view11[0]-view00[0], view11[1]-view00[1] )
-        origin = ( -view00[0]/viewDiff[0]*diffLength,-view00[1]/viewDiff[1]*diffLength )
-        upperLeft = ( (1-view00[0])/viewDiff[0]*diffLength,(1-view00[1])/viewDiff[1]*diffLength )
-        scale = ( upperLeft[0]-origin[0], upperLeft[1]-origin[1] )
-        return [ uv[0]*scale[0]+origin[0], uv[1]*scale[1]+origin[1] ]
+        viewDiff = (view11[0]-view00[0], view11[1]-view00[1])
+        origin = (-view00[0]/viewDiff[0]*diffLength, -view00[1]/viewDiff[1]*diffLength)
+        upperLeft = ((1-view00[0])/viewDiff[0]*diffLength, (1-view00[1])/viewDiff[1]*diffLength)
+        scale = (upperLeft[0]-origin[0], upperLeft[1]-origin[1])
+        return [uv[0]*scale[0]+origin[0], uv[1]*scale[1]+origin[1]]
 
 class Particles:
     """ A class managing the particle system for the paint operator """
     def __init__(self, context):
         self.rnd = random.Random()
-        self.paint_mesh = particle_paint.trianglemesh.TriangleMesh(context.active_object)
+        self.paint_mesh = trianglemesh.TriangleMesh(context.active_object)
         self.matrix = self.paint_mesh.object.matrix_world.copy()
         self.particles = []
-        self.fakeUvContext=self.createFakeUvContext(context)
+        self.painter = particle_painter_gpu.ParticlePainterGPU(context)
 
     def numParticles(self):
         """ Return the number of simulated particles """
         return len(self.particles)
-
-    def createFakeUvContext(self, context):
-        """ We fake a Uv context using a square aspect ratio, where we can paint
-            into """
-        screen = context.screen
-        fakedContext = context.copy()
-
-        # Update the context 
-        for area in screen.areas:
-            if area.type == 'IMAGE_EDITOR':
-                for region in area.regions:
-                    if region.type == 'WINDOW':
-                        fakedContext = {'region': region, 'area': area}
-
-        return fakedContext
     
     def shoot(self, context, event, particle_settings):
         """ Shoot particles and paint them """
@@ -179,22 +166,7 @@ class Particles:
 
     def paint_particles(self, context):
         """ Paint all particles into the texture """
-        paintAllAtOnce = False
-        brush = self.get_active_brush(context)
-        strength = brush.strength
-        if paintAllAtOnce:
-            # WARNING: paintAllAtOnce can't handle color variation
-            strokes = [p.generateStroke(self.fakeUvContext, strength) for p in self.particles]
-            bpy.ops.paint.image_paint(self.fakeUvContext, stroke=strokes)
-        else:
-            oldBrushColor = brush.color.copy()
-            for p in self.particles:
-                stroke = [p.generateStroke(self.fakeUvContext, strength)]
-                brush.color.h = oldBrushColor.h+p.colorOffset[0]
-                brush.color.s = oldBrushColor.s+p.colorOffset[1]
-                brush.color.v = oldBrushColor.v+p.colorOffset[2]
-                bpy.ops.paint.image_paint(self.fakeUvContext, stroke=stroke)
-            brush.color = oldBrushColor
+        self.painter.draw(self.particles)
 
     def clear_particles(self):
         """ Start with an empty set of particles """
@@ -210,10 +182,6 @@ class Particles:
         """ Get the active image for painting """
         active_slot = context.object.active_material.paint_active_slot
         return context.object.active_material.texture_paint_images[active_slot]
-
-    def get_active_brush(self, context):
-        """ Get the active brush """
-        return context.tool_settings.image_paint.brush
 
     def get_brush_size(self, context):
         """ Get the active brush size """
