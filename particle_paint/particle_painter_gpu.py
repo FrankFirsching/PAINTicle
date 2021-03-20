@@ -5,11 +5,13 @@
 from . import particle_painter
 from . import gpu_utils
 from . import dependencies
+from . import particle
 
 import bpy
 
 import array
 import struct
+import typing
 import moderngl
 
 
@@ -23,7 +25,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.last_active_image_slot = None
         self.shader = gpu_utils.load_shader("particle", self.glcontext)
         self.vertex_buffer = self.glcontext.buffer(reserve=1)
-        self.vertex_array = self.glcontext.vertex_array(self.shader, self.vertex_buffer, "uv")
+        self.vertex_array = self.glcontext.vertex_array(self.shader, self.vertex_buffer, "p.uv", "p.size", "p.age", "p.max_age", "p.color")
         self.counter = 0
         # A hack for the update problem
         self.roll_factor = 1
@@ -63,11 +65,10 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             self.framebuffer.color_attachments[0].write(data)
             self.last_active_image_slot = image_slot
 
-    def update_vertex_buffer(self, particles):
+    def update_vertex_buffer(self, particles: typing.Iterable[particle.Particle]):
         coords = array.array("f")
         for p in particles:
-            coords.append(p.uv[0])
-            coords.append(p.uv[1])
+            p.append_visual_properties(coords)
         vbo_data = coords.tobytes()
         self.vertex_buffer.orphan(len(vbo_data))
         self.vertex_buffer.write(vbo_data)
@@ -76,11 +77,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         width = self.framebuffer.width
         height = self.framebuffer.height
         brush = self.get_active_brush()
-        color = brush.color
-        particle_settings = self.context.scene.particle_paint_settings
-        self.shader["particle_size"] = particle_settings.particle_size / width
         self.shader["image_size"] = (width, height)
-        self.shader["color"] = (color[0], color[1], color[2])
 
     def update_image_from_pixels(self, pixels):
         image = self.get_active_image()

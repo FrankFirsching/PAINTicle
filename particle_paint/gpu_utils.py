@@ -50,14 +50,24 @@ def load_shader_source(shader_name: str, stage: str) -> str:
         return f.read()
 
 
+def _join_shader(definitions_shader, specific_shader):
+    version = "#version 330"
+    if definitions_shader is None:
+        return version + "\n" + specific_shader
+    else:
+        return version + "\n" + definitions_shader + "\n" + specific_shader
+
+
 def load_shader(shader_name, glcontext: moderngl.Context) -> moderngl.Program:
     """ Load all shaders for a given shader name """
     vertex_shader = load_shader_source(shader_name, "vert")
     geometry_shader = load_shader_source(shader_name, "geom")
     fragment_shader = load_shader_source(shader_name, "frag")
-    program = glcontext.program(vertex_shader=vertex_shader,
-                                fragment_shader=fragment_shader,
-                                geometry_shader=geometry_shader)
+    definitions_shader = load_shader_source(shader_name, "def")
+    program = glcontext.program(vertex_shader=_join_shader(definitions_shader, vertex_shader),
+                                fragment_shader=_join_shader(definitions_shader, fragment_shader),
+                                geometry_shader=_join_shader(definitions_shader, geometry_shader),
+                                )
     return program
 
 
@@ -76,8 +86,16 @@ def save_pixels(filepath, pixel_data, width, height):
     image.save()
     bpy.data.images.remove(image)
 
+
 def trigger_redraw():
     """ Triggers a redraw in all image and 3D views """
     for area in bpy.context.screen.areas:
         if area.type in ['IMAGE_EDITOR', 'VIEW_3D']:
             area.tag_redraw()
+
+
+def print_shader_members(shader: moderngl.Program):
+    """ A debugging function, printing all varyings and uniforms of a shader program """
+    for name in shader:
+        member = shader[name]
+        print(name, type(member), member)

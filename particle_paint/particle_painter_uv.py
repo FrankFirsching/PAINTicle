@@ -22,9 +22,7 @@ class ParticlePainterUV(particle_painter.ParticlePainter):
         oldBrushColor = brush.color.copy()
         for p in particles:
             stroke = [p.generateStroke(self.fakeUvContext, strength)]
-            brush.color.h = oldBrushColor.h+p.colorOffset[0]
-            brush.color.s = oldBrushColor.s+p.colorOffset[1]
-            brush.color.v = oldBrushColor.v+p.colorOffset[2]
+            brush.color = p.color
             bpy.ops.paint.image_paint(self.fakeUvContext, stroke=stroke)
         brush.color = oldBrushColor
 

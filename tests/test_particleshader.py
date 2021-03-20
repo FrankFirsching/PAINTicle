@@ -31,20 +31,21 @@ def test_draw_offscreen():
     framebuffer = gpu_utils.gpu_simple_framebuffer((width, height), glcontext)
     shader = gpu_utils.load_shader("particle", glcontext)
     assert shader is not None
-    shader["particle_size"] = 0.05
     shader["image_size"] = (width, height)
-    shader["color"] = (1, 0, 1)
 
     offset = 0.2
-    coords = [0.5, 0.5,
-              0.5+offset, 0.5,
-              0.5-offset, 0.5,
-              0.5, 0.5+offset,
-              0.5, 0.5-offset]
+    # Semantics of the values:
+    #         uv                    size age+max  color
+    coords = [0.5, 0.5,             50,  0.0, 1,  0.5, 0.5, 0.5,
+              0.5+offset, 0.5,      75,  0.1, 1,  0.9, 0.2, 0.2,
+              0.5-offset, 0.5,      25,  0.2, 1,  0.2, 0.9, 0.2,
+              0.5, 0.5+offset,      50,  0.3, 1,  0.2, 0.2, 0.9,
+              0.5, 0.5-offset,      50,  0.4, 1,  0.9, 0.2, 0.9
+              ]
     num_floats = len(coords)
     vbo_data = struct.pack(f"{num_floats}f", *coords)
     vbo = glcontext.buffer(vbo_data)
-    vao = glcontext.vertex_array(shader, vbo, "uv")
+    vao = glcontext.vertex_array(shader, vbo, "p.uv", "p.size", "p.age", "p.max_age", "p.color")
     scope = glcontext.scope(framebuffer=framebuffer)
     with scope:
         glcontext.clear(0, 0, 0, 0)
