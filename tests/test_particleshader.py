@@ -18,7 +18,7 @@ import tstutils
 
 
 def test_shader_loading():
-    source = gpu_utils.load_shader_source("particle", "frag")
+    source = gpu_utils.load_shader_source("particle2d", "frag")
     assert source is not None
     assert source.startswith("// Particle Paint shader")
 
@@ -29,9 +29,11 @@ def test_draw_offscreen():
     height = 1024
     glcontext = moderngl.create_context()
     framebuffer = gpu_utils.gpu_simple_framebuffer((width, height), glcontext)
-    shader = gpu_utils.load_shader("particle", glcontext)
+    shader = gpu_utils.load_shader("particle2d", glcontext, ["particle"])
     assert shader is not None
     shader["image_size"] = (width, height)
+    shader["particle_size_age_factor"] = 2
+    shader["strength"] = 1
 
     offset = 0.2
     # Semantics of the values:

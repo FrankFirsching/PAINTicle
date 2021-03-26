@@ -47,7 +47,7 @@ class PaintOperator(bpy.types.Operator):
                 deltaT = (currenttime - self.lastcall) * 1e-9
             self.lastcall = time.time_ns()
             if self._left_mouse_pressed:
-                self._particles.shoot(context, event, settings)
+                self._particles.shoot(context, event, deltaT, settings)
             self._particles.move_particles(settings.physics, deltaT)
             self._particles.paint_particles(context)
             if not settings.stop_painting_on_mouse_release and not self._left_mouse_pressed:
@@ -107,9 +107,10 @@ class PaintOperator(bpy.types.Operator):
 
     def invoke(self, context, event):
         if context.space_data.type == 'VIEW_3D':
+            # Move out of a potential camera view into normal perspective one, so we
+            # don't risk changing the camera, if it's locked to the view.
             v3d = context.space_data
             rv3d = v3d.region_3d
-
             if rv3d.view_perspective == 'CAMERA':
                 rv3d.view_perspective = 'PERSP'
 

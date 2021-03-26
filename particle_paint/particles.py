@@ -24,13 +24,28 @@ class Particles:
         self.matrix = self.paint_mesh.object.matrix_world.copy()
         self.particles = []
         self.painter = particle_painter_gpu.ParticlePainterGPU(context)
+        self.last_shoot_time = 0
 
     def numParticles(self):
         """ Return the number of simulated particles """
         return len(self.particles)
     
-    def shoot(self, context: bpy.types.Context, event, particle_settings):
-        """ Shoot particles and paint them """
+    def shoot(self, context: bpy.types.Context, event, delta_t, particle_settings):
+        """ Shoot particles according to the flow rate """
+        time_between_particles = 1/particle_settings.flow_rate
+        if delta_t < time_between_particles:
+            self.last_shoot_time += delta_t
+            if self.last_shoot_time > time_between_particles:
+                self.shoot_single(context, event, particle_settings)
+                self.last_shoot_time -= time_between_particles
+        else:
+            num_particles = delta_t / time_between_particles
+            for i in range(int(num_particles+0.5)):
+                self.shoot_single(context, event, particle_settings)
+            self.last_shoot_time = 0
+    
+    def shoot_single(self, context: bpy.types.Context, event, particle_settings):
+        """ Shoot a single particle """        
         paint_size = self.get_brush_size(context)
         angle = 2*math.pi*self.rnd.random()
         distance = paint_size*self.rnd.random()
@@ -42,9 +57,17 @@ class Particles:
         
         location, normal, face_index = self.ray_cast_on_object(ray_origin,
                                                                ray_direction)
-        if location != None:
+        if location is not None:
+            ray_direction_unit = ray_direction.normalized()
+            view_speed = particle_settings.physics.initial_speed * ray_direction_unit
+            max_initial_random = 0.5 * particle_settings.physics.initial_speed * particle_settings.physics.initial_speed_random
+            view_speed += mathutils.Vector((random.uniform(-max_initial_random, max_initial_random),
+                                            random.uniform(-max_initial_random, max_initial_random),
+                                            random.uniform(-max_initial_random, max_initial_random)))
+            initial_surface_speed = view_speed - view_speed.project(normal)
             tri_index = self.paint_mesh.triangle_for_point_on_poly(location, face_index)
             p = particle.Particle(location, tri_index, self.get_brush_color(context), self.paint_mesh, particle_settings)
+            p.speed = initial_surface_speed
             self.add_particle(p)
     
     def move_particles(self, physics, deltaT):

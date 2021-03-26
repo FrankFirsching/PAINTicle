@@ -2,6 +2,7 @@
 
 struct Particle
 {
+    vec3 location;
     vec2 uv;
     float size;
     float age;

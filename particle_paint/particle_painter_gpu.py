@@ -23,10 +23,10 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.glcontext = moderngl.create_context()
         self.framebuffer = None
         self.last_active_image_slot = None
-        self.shader = gpu_utils.load_shader("particle", self.glcontext)
+        self.preview_shader = gpu_utils.load_shader("particle3d", self.glcontext, ["particle"])
+        self.paint_shader = gpu_utils.load_shader("particle2d", self.glcontext, ["particle"])
         self.vertex_buffer = self.glcontext.buffer(reserve=1)
-        self.vertex_array = self.glcontext.vertex_array(self.shader, self.vertex_buffer, "p.uv", "p.size", "p.age", "p.max_age", "p.color")
-        self.counter = 0
+        self.vertex_array = self.glcontext.vertex_array(self.paint_shader, self.vao_definition(self.paint_shader))
         # A hack for the update problem
         self.roll_factor = 1
 
@@ -37,19 +37,10 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         if self.vertex_buffer is None:
             return  # Nothing to draw
         self.update_uniforms()
-        # brush = self.get_active_brush()
-        # strength = brush.strength
-        # brushColor = brush.color
         scope = self.glcontext.scope(framebuffer=self.framebuffer, enable=moderngl.Context.BLEND)
         with scope:
-            # self.glcontext.clear()
             self.vertex_array.render(moderngl.vertex_array.POINTS, num_particles*2)
-
-            width = self.framebuffer.width
-            height = self.framebuffer.height
-            # Only save every 25th image for debuggin purposes
-            pixels = gpu_utils.read_pixel_data_from_framebuffer(width, height, self.framebuffer)
-            self.update_image_from_pixels(pixels)
+        self.write_blender_image()
 
     def update_framebuffer(self):
         image = self.get_active_image()
@@ -68,21 +59,68 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
     def update_vertex_buffer(self, particles: typing.Iterable[particle.Particle]):
         coords = array.array("f")
         for p in particles:
-            p.append_visual_properties(coords)
+            self.append_visual_properties(coords, p)
         vbo_data = coords.tobytes()
         self.vertex_buffer.orphan(len(vbo_data))
         self.vertex_buffer.write(vbo_data)
+
+    def append_visual_properties(self, vbo_data: array.array, p):
+        """ Append the particle's visual properties to the vbo data array. """
+        # Also see vao_definition, that provides the glsl schema for the data
+        vbo_data.extend(p.location)
+        vbo_data.extend(p.uv)
+        vbo_data.append(p.particle_size)
+        vbo_data.append(p.age)
+        vbo_data.append(p.max_age)
+        vbo_data.append(p.color.r)
+        vbo_data.append(p.color.g)
+        vbo_data.append(p.color.b)
+
+    def vao_definition(self, shader):
+        """ Generate a vao definition for the given shader """
+        # This list needs to conform to the list of attribute written in append_visual_properties
+        # The shader library particle_def.glsl also defines these properties.
+        attribs = [("p.location", 3),
+                   ("p.uv", 2),
+                   ("p.size", 1),
+                   ("p.age", 1),
+                   ("p.max_age", 1),
+                   ("p.color", 3)]
+        sizes = []
+        names = []
+        for attrib in attribs:
+            if attrib[0] in shader:
+                x = "{}f".format(attrib[1])
+                names.append(attrib[0])
+            else:
+                x = "{}x".format(attrib[1]*4) # We use floats, so padding is 4 bytes per float
+            sizes.append((x))
+        print("vao_def:", sizes, names)
+        return [(self.vertex_buffer, " ".join(sizes), *names)]
+
 
     def update_uniforms(self):
         width = self.framebuffer.width
         height = self.framebuffer.height
         brush = self.get_active_brush()
-        self.shader["image_size"] = (width, height)
+        self.paint_shader["image_size"] = (width, height)
+        self.paint_shader["strength"] = brush.strength
+        self.paint_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
 
-    def update_image_from_pixels(self, pixels):
+    def write_blender_image_pixels(self, pixels):
         image = self.get_active_image()
         image.pixels.foreach_set(pixels)
 
+    def write_blender_image(self):
+        scope = self.glcontext.scope(framebuffer=self.framebuffer, enable=moderngl.Context.BLEND)
+        with scope:
+            width = self.framebuffer.width
+            height = self.framebuffer.height
+            pixels = gpu_utils.read_pixel_data_from_framebuffer(width, height, self.framebuffer)
+            self.write_blender_image_pixels(pixels)
+        self.update_blender_viewport()
+
+    def update_blender_viewport(self):
         # BIG HACK: None of the update, gl_touch methods of the image 
         # and neither tag_redraw of the view_3d functions work to trigger
         # rerendering the view. So we wiggle the view a very small amount around
@@ -93,4 +131,3 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         # not working: self.context.area.tag_redraw()
         self.roll_factor = -1 if self.roll_factor > 0 else 1
         bpy.ops.view3d.view_roll(angle=0.000005*self.roll_factor)
-

@@ -8,6 +8,7 @@ in Particle p_frag;
 out vec4 frag_color;
 
 uniform vec2 image_size;
+uniform float strength;
 
 void main()
 {
@@ -16,5 +17,7 @@ void main()
   offset *= 2/p_frag.size;
   float dist = length(offset);
   float alpha = 1-p_frag.age/p_frag.max_age;
-  frag_color = vec4(p_frag.color, alpha*(1-dist*dist));
+  frag_color = vec4(p_frag.color, strength*alpha*(1-dist*dist));
+  if(frag_color.a<0)
+    discard;
 }

@@ -5,8 +5,13 @@ from bpy.props import PointerProperty
 from bpy.types import PropertyGroup
 from particle_paint.physics import Physics
 
+
 class Settings(PropertyGroup):
     """ The settings object for the particle paint tool """
+    flow_rate: FloatProperty(name="Number of particles per second",
+                                 description="Specifies the number of particles emitted per second from the brush.",
+                                 default=50, min=0.0, soft_min=0.0, soft_max=100,
+                                 options=set())
     particle_size: FloatProperty(name="Particle size",
                                  description="The maximum size of an individual particle.",
                                  default=2, min=0.0, soft_min=0.0, soft_max=100,
@@ -15,6 +20,18 @@ class Settings(PropertyGroup):
                                         description="The possible size variation of the particles.",
                                         default=1, min=0.0, soft_min=0.0, soft_max=100,
                                         options=set())
+    particle_size_age_factor: FloatProperty(name="Particle size age factor",
+                                            description="Multiplier of the particle's size dependent on the age.\n<1 makes the particle smaller over time.\n=1 keeps the size.\n>1 makes it larger.",
+                                            default=1, min=0, soft_max=2,
+                                            options=set())
+    mass: FloatProperty(name="Mass",
+                        description="The average mass of a single particle.",
+                        default=50, min=0.0, soft_min=0.0, soft_max=500,
+                        options=set())
+    mass_random: FloatProperty(name="Particle mass randomization",
+                               description="The possible mass variation of the particles.",
+                               default=25, min=0.0, soft_min=0.0, soft_max=500,
+                               options=set())
     max_age: FloatProperty(name="Particle maximum age",
                            description="The maximum age of an individual particle.",
                            default=2, min=0.0, soft_min=0.0, soft_max=100,

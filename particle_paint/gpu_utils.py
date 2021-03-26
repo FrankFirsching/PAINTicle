@@ -3,10 +3,12 @@
 import bpy
 import os
 import numpy as np
+import typing
 
 from . import dependencies
 
 import moderngl
+
 
 def image_sizes(image):
     """ Thus function shall return all images sizes of all UDIM tiles. However
@@ -31,7 +33,6 @@ def gpu_framebuffer_for_image(image, glcontext: moderngl.Context):
 
 
 def gpu_simple_framebuffer(size, glcontext: moderngl.Context) -> moderngl.Framebuffer:
-    #color_attachment = glcontext.renderbuffer(size)
     color_attachment = glcontext.texture(size, components=4, dtype="f4")
     return glcontext.framebuffer(color_attachment)
 
@@ -41,29 +42,37 @@ def load_shader_source(shader_name: str, stage: str) -> str:
         * 'vert' = vertex shader
         * 'geom' = geometry shader
         * 'frag' = fragment shader
+        * 'def' = definitions for each stage
     """
     basepath = os.path.dirname(os.path.realpath(__file__))
-    full_file_name = os.path.join(basepath, "shaders", shader_name+"_"+stage+".glsl")
+    stage_addition = "" if stage is None or stage=="" else "_"+stage
+    full_file_name = os.path.join(basepath, "shaders", shader_name+stage_addition+".glsl")
     if not os.path.exists(full_file_name):
         return None
     with open(full_file_name) as f:
         return f.read()
 
 
-def _join_shader(definitions_shader, specific_shader):
-    version = "#version 330"
-    if definitions_shader is None:
-        return version + "\n" + specific_shader
-    else:
-        return version + "\n" + definitions_shader + "\n" + specific_shader
+def _join_shader(definitions_shader, specific_shader, prepend_version=True):
+    version = "#version 330\n" if prepend_version else ""
+    if prepend_version and specific_shader is None:
+        # On the last stage of concatenation, if specific shader is None, then also return None
+        return None
+    use_definition = definitions_shader+"\n" if definitions_shader is not None else ""
+    use_specific = specific_shader if specific_shader is not None else ""
+    return version + use_definition + use_specific
 
 
-def load_shader(shader_name, glcontext: moderngl.Context) -> moderngl.Program:
+def load_shader(shader_name, glcontext: moderngl.Context, additional_libs: typing.Iterable[str] = None) -> moderngl.Program:
     """ Load all shaders for a given shader name """
     vertex_shader = load_shader_source(shader_name, "vert")
     geometry_shader = load_shader_source(shader_name, "geom")
     fragment_shader = load_shader_source(shader_name, "frag")
     definitions_shader = load_shader_source(shader_name, "def")
+    if additional_libs is not None:
+        for lib in reversed(additional_libs):
+            definitions_shader = _join_shader(load_shader_source(lib, "def"), definitions_shader, False)
+
     program = glcontext.program(vertex_shader=_join_shader(definitions_shader, vertex_shader),
                                 fragment_shader=_join_shader(definitions_shader, fragment_shader),
                                 geometry_shader=_join_shader(definitions_shader, geometry_shader),

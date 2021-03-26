@@ -34,6 +34,8 @@ classes = (
     operator.PaintOperator,
     physics.Physics,
     settings.Settings,
+    panel.ParticlePaintPresetsMenu,
+    panel.AddPresetParticleSettings,
     panel.ParticlePaintMainPanel,
     panel.ParticlePaintPhysicsPanel,
     preferences_panel.PreferencesPanel
