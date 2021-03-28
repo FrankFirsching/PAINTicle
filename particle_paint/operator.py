@@ -6,6 +6,7 @@ import time
 
 import particle_paint.particles
 
+
 # This class is the blender operator interface. It cares about mouse and pen
 # handling. The real drawing is done in a different module: particles.
 # See there for the real painting logic.
@@ -41,14 +42,14 @@ class PaintOperator(bpy.types.Operator):
                 return {'RUNNING_MODAL'}
         elif event.type == 'TIMER':
             settings = context.scene.particle_paint_settings
-            deltaT = 0
+            delta_t = 0
             currenttime = time.time_ns()
-            if self.lastcall!=0:
-                deltaT = (currenttime - self.lastcall) * 1e-9
+            if self.lastcall != 0:
+                delta_t = (currenttime - self.lastcall) * 1e-9
             self.lastcall = time.time_ns()
             if self._left_mouse_pressed:
-                self._particles.shoot(context, event, deltaT, settings)
-            self._particles.move_particles(settings.physics, deltaT)
+                self._particles.shoot(context, event, delta_t, settings)
+            self._particles.move_particles(settings.physics, delta_t)
             self._particles.paint_particles(context)
             if not settings.stop_painting_on_mouse_release and not self._left_mouse_pressed:
                 if self._particles.numParticles() == 0:
@@ -74,13 +75,14 @@ class PaintOperator(bpy.types.Operator):
             # We end the tool with a right click
             context.area.header_text_set(None)
             self.setTimer(context, False)
+            self._particles = None
             return {'FINISHED'}
 
         return {'PASS_THROUGH'}
 
     def setTimer(self, context, onOff):
         wm = context.window_manager
-        if self._timer!=None: # Remove a potentially active timer
+        if self._timer is not None:  # Remove a potentially active timer
             wm.event_timer_remove(self._timer)
         if onOff:
             self._timer = wm.event_timer_add(0.01, window=context.window)
@@ -88,22 +90,21 @@ class PaintOperator(bpy.types.Operator):
             self._timer = None
 
     def startProfile(self):
-        if self.pr==None:
+        if self.pr is None:
             return
             self.pr = cProfile.Profile()
             self.pr.enable()
 
     def endProfile(self):
-        if self.pr!=None:
+        if self.pr is not None:
             self.pr.disable()
             s = io.StringIO()
-            #sortby = pstats.SortKey.CUMULATIVE
+            # sortby = pstats.SortKey.CUMULATIVE
             sortby = 'tottime'
             ps = pstats.Stats(self.pr, stream=s).sort_stats(sortby)
             ps.print_stats()
             print(s.getvalue())
             self.pr = None
-
 
     def invoke(self, context, event):
         if context.space_data.type == 'VIEW_3D':

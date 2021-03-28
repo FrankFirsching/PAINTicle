@@ -15,6 +15,10 @@ class ParticlePainterUV(particle_painter.ParticlePainter):
         super().__init__(context)
         self.fakeUvContext = self.createFakeUvContext(context)
 
+    def shutdown(self):
+        # Nothing to be done for this painter
+        pass
+
     def draw(self, particles):
         brush = self.get_active_brush()
         strength = brush.strength

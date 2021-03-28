@@ -22,6 +22,11 @@ class ParticlePainter(ABC):
         self.context = context
 
     @abstractmethod
+    def shutdown(self):
+        """ Called before the containing particles object is destroyed. Can e.g. be used to unregister draw callbacks """
+        pass
+
+    @abstractmethod
     def draw(self, particles):
         pass
 

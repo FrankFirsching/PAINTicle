@@ -26,3 +26,6 @@ def has_ui():
 def no_ui():
     """ Returns true, if blender is running without UI functionality """
     return bpy.app.background
+
+def is_close(v1, v2, tolerance):
+    return  (v1 >= v2 - tolerance) and (v1 <= v2 + tolerance)

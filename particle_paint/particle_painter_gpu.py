@@ -6,8 +6,11 @@ from . import particle_painter
 from . import gpu_utils
 from . import dependencies
 from . import particle
+from . import utils
 
 import bpy
+import gpu
+import mathutils
 
 import array
 import struct
@@ -18,6 +21,8 @@ import moderngl
 class ParticlePainterGPU(particle_painter.ParticlePainter):
     """ This particle painter is using the GPU to draw the particles. """
 
+    draw_handler = None
+
     def __init__(self, context: bpy.types.Context):
         super().__init__(context)
         self.glcontext = moderngl.create_context()
@@ -26,21 +31,42 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.preview_shader = gpu_utils.load_shader("particle3d", self.glcontext, ["particle"])
         self.paint_shader = gpu_utils.load_shader("particle2d", self.glcontext, ["particle"])
         self.vertex_buffer = self.glcontext.buffer(reserve=1)
-        self.vertex_array = self.glcontext.vertex_array(self.paint_shader, self.vao_definition(self.paint_shader))
+        self.paint_vertex_array = self.vao_definition(self.paint_shader)
         # A hack for the update problem
         self.roll_factor = 1
+        self.use_preview = False
+        if ParticlePainterGPU.draw_handler is None and self.use_preview:
+            ParticlePainterGPU.draw_handler = bpy.types.SpaceView3D.draw_handler_add(ParticlePainterGPU._draw_viewport, (self,), "WINDOW", "POST_VIEW")
+
+    def shutdown(self):
+        if ParticlePainterGPU.draw_handler is not None:
+            bpy.types.SpaceView3D.draw_handler_remove(ParticlePainterGPU.draw_handler, "WINDOW")
+            ParticlePainterGPU.draw_handler = None
+
+    def _draw_viewport(self):
+        """ Callback function from blender to draw our particles into the viewport. Don't call by yourself! """
+        self.glcontext.point_size = 10
+        self.glcontext.depth_func = "<="
+        self.glcontext.enable(moderngl.Context.BLEND | moderngl.Context.DEPTH_TEST)
+        # We somehow need to recreate the vao every time, since otherwise the vertex buffers are not going to be
+        # activated and some other one from blender is the active buffer.
+        preview_vertex_array = self.vao_definition(self.preview_shader)
+        preview_vertex_array.render(moderngl.vertex_array.POINTS)
 
     def draw(self, particles):
         num_particles = len(particles)
         self.update_framebuffer()
         self.update_vertex_buffer(particles)
-        if self.vertex_buffer is None:
-            return  # Nothing to draw
         self.update_uniforms()
-        scope = self.glcontext.scope(framebuffer=self.framebuffer, enable=moderngl.Context.BLEND)
-        with scope:
-            self.vertex_array.render(moderngl.vertex_array.POINTS, num_particles*2)
-        self.write_blender_image()
+        if num_particles == 0:
+            return  # Nothing to draw
+        if self.use_preview:
+            self.update_blender_viewport()
+        else:
+            scope = self.glcontext.scope(framebuffer=self.framebuffer, enable=moderngl.Context.BLEND)
+            with scope:
+                self.paint_vertex_array.render(moderngl.vertex_array.POINTS, num_particles)
+            self.write_blender_image()
 
     def update_framebuffer(self):
         image = self.get_active_image()
@@ -61,7 +87,9 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         for p in particles:
             self.append_visual_properties(coords, p)
         vbo_data = coords.tobytes()
-        self.vertex_buffer.orphan(len(vbo_data))
+        # We can't resize down to 0, so we use 1 byte length as indication of zero particles
+        new_size = max(1, len(vbo_data))
+        self.vertex_buffer.orphan(new_size)
         self.vertex_buffer.write(vbo_data)
 
     def append_visual_properties(self, vbo_data: array.array, p):
@@ -72,9 +100,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         vbo_data.append(p.particle_size)
         vbo_data.append(p.age)
         vbo_data.append(p.max_age)
-        vbo_data.append(p.color.r)
-        vbo_data.append(p.color.g)
-        vbo_data.append(p.color.b)
+        vbo_data.extend(p.color)
 
     def vao_definition(self, shader):
         """ Generate a vao definition for the given shader """
@@ -93,11 +119,9 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
                 x = "{}f".format(attrib[1])
                 names.append(attrib[0])
             else:
-                x = "{}x".format(attrib[1]*4) # We use floats, so padding is 4 bytes per float
+                x = "{}x".format(attrib[1]*4)  # We use floats, so padding is 4 bytes per float
             sizes.append((x))
-        print("vao_def:", sizes, names)
-        return [(self.vertex_buffer, " ".join(sizes), *names)]
-
+        return self.glcontext.vertex_array(shader, [(self.vertex_buffer, " ".join(sizes), *names)])
 
     def update_uniforms(self):
         width = self.framebuffer.width
@@ -106,6 +130,10 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.paint_shader["image_size"] = (width, height)
         self.paint_shader["strength"] = brush.strength
         self.paint_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
+
+        model_view_projection = self.context.region_data.perspective_matrix
+        self.preview_shader["model_view_projection"] = utils.matrix_to_tuple(model_view_projection)
+        self.preview_shader["strength"] = brush.strength
 
     def write_blender_image_pixels(self, pixels):
         image = self.get_active_image()

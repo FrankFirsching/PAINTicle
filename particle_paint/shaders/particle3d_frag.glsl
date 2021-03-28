@@ -12,9 +12,9 @@ uniform float strength;
 
 void main()
 {
-  // We already did aspect correction in the geometry shader, so we divide by width of image
-  vec2 offset = (gl_FragCoord.xy - center)/image_size.xx;
-  offset *= 2/p_frag.size;
+  // Discard everything outside of the circular point shape
+  vec2 offset = 2*gl_PointCoord.xy - vec2(1);
+  // Set the particles's color
   frag_color = vec4(p_frag.color, strength*particle_alpha(p_frag, offset));
   if(frag_color.a<0)
     discard;

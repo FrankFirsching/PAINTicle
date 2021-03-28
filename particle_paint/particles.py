@@ -26,6 +26,9 @@ class Particles:
         self.painter = particle_painter_gpu.ParticlePainterGPU(context)
         self.last_shoot_time = 0
 
+    def __del__(self):
+        self.painter.shutdown()
+
     def numParticles(self):
         """ Return the number of simulated particles """
         return len(self.particles)
@@ -115,7 +118,7 @@ class Particles:
         ray_direction = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
         ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
 
-        return ray_origin,ray_direction
+        return ray_origin, ray_direction
 
     def ray_cast_on_object(self, ray_origin, ray_direction):
         """Wrapper for ray casting that moves the ray into object space"""
