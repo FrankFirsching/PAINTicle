@@ -11,6 +11,7 @@ from . import utils
 import bpy
 import gpu
 import mathutils
+import bgl
 
 import array
 import struct
@@ -26,28 +27,40 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
     def __init__(self, context: bpy.types.Context):
         super().__init__(context)
         self.glcontext = moderngl.create_context()
-        self.framebuffer = None
+        self.paintbuffer = None
         self.last_active_image_slot = None
         self.preview_shader = gpu_utils.load_shader("particle3d", self.glcontext, ["particle"])
         self.paint_shader = gpu_utils.load_shader("particle2d", self.glcontext, ["particle"])
         self.vertex_buffer = self.glcontext.buffer(reserve=1)
         self.paint_vertex_array = self.vao_definition(self.paint_shader)
+        self.paintbuffer_changed = False
         # A hack for the update problem
         self.roll_factor = 1
         self.use_preview = False
-        if ParticlePainterGPU.draw_handler is None and self.use_preview:
-            ParticlePainterGPU.draw_handler = bpy.types.SpaceView3D.draw_handler_add(ParticlePainterGPU._draw_viewport, (self,), "WINDOW", "POST_VIEW")
+        self.update_paintbuffer()
 
     def shutdown(self):
+        self.write_blender_image()
+        self.set_use_preview(False)
+
+    def set_use_preview(self, onOff):
+        if self.use_preview == onOff:
+            return
         if ParticlePainterGPU.draw_handler is not None:
             bpy.types.SpaceView3D.draw_handler_remove(ParticlePainterGPU.draw_handler, "WINDOW")
             ParticlePainterGPU.draw_handler = None
+        self.use_preview = onOff
+        if ParticlePainterGPU.draw_handler is None and self.use_preview:
+            ParticlePainterGPU.draw_handler =bpy.types.SpaceView3D.draw_handler_add(ParticlePainterGPU._draw_viewport,
+                                                                                    (self,), "WINDOW", "POST_VIEW")
+
 
     def _draw_viewport(self):
         """ Callback function from blender to draw our particles into the viewport. Don't call by yourself! """
-        self.glcontext.point_size = 10
+        bgl.glDepthMask(False)  # Need to use bgl here, since moderngl doesn't allow modifying the depth mask
         self.glcontext.depth_func = "<="
-        self.glcontext.enable(moderngl.Context.BLEND | moderngl.Context.DEPTH_TEST)
+        self.glcontext.enable(moderngl.Context.BLEND | moderngl.Context.DEPTH_TEST |
+                              moderngl.Context.PROGRAM_POINT_SIZE)
         # We somehow need to recreate the vao every time, since otherwise the vertex buffers are not going to be
         # activated and some other one from blender is the active buffer.
         preview_vertex_array = self.vao_definition(self.preview_shader)
@@ -55,32 +68,42 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
 
     def draw(self, particles):
         num_particles = len(particles)
-        self.update_framebuffer()
+        self.update_paintbuffer()
         self.update_vertex_buffer(particles)
         self.update_uniforms()
         if num_particles == 0:
+            self.write_blender_image()
             return  # Nothing to draw
+
+        # Draw into the texture framebuffer
+        scope = self.glcontext.scope(framebuffer=self.paintbuffer, enable=moderngl.Context.BLEND)
+        with scope:
+            self.paintbuffer_changed = True
+            self.paint_vertex_array.render(moderngl.vertex_array.POINTS, num_particles)
+
         if self.use_preview:
             self.update_blender_viewport()
         else:
-            scope = self.glcontext.scope(framebuffer=self.framebuffer, enable=moderngl.Context.BLEND)
-            with scope:
-                self.paint_vertex_array.render(moderngl.vertex_array.POINTS, num_particles)
             self.write_blender_image()
 
-    def update_framebuffer(self):
+    def update_paintbuffer(self):
         image = self.get_active_image()
         image_size = gpu_utils.max_image_size(image)
-        if (self.framebuffer is None or
-                image_size[0] != self.framebuffer.width or
-                image_size[1] != self.framebuffer.height):
-            self.framebuffer = gpu_utils.gpu_framebuffer_for_image(image, self.glcontext)
+        if (self.paintbuffer is None or
+                image_size[0] != self.paintbuffer.width or
+                image_size[1] != self.paintbuffer.height):
+            self.paintbuffer = gpu_utils.gpu_framebuffer_for_image(image, self.glcontext)
         image_slot = self.get_active_image_slot()
         if image_slot != self.last_active_image_slot:
-            # Fill the original image into the framebuffer
+            # Fill the original image into the paintbuffer
+            self.context.window.cursor_modal_set("WAIT")
             data = array.array("f", image.pixels)
-            self.framebuffer.color_attachments[0].write(data)
+            self.paintbuffer.color_attachments[0].write(data)
+            self.paintbuffer_changed = False
             self.last_active_image_slot = image_slot
+            preview_activated = self.paintbuffer.width*self.paintbuffer.height > 1024*1024
+            self.set_use_preview(preview_activated)
+            self.context.window.cursor_modal_restore()
 
     def update_vertex_buffer(self, particles: typing.Iterable[particle.Particle]):
         coords = array.array("f")
@@ -124,8 +147,8 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         return self.glcontext.vertex_array(shader, [(self.vertex_buffer, " ".join(sizes), *names)])
 
     def update_uniforms(self):
-        width = self.framebuffer.width
-        height = self.framebuffer.height
+        width = self.paintbuffer.width
+        height = self.paintbuffer.height
         brush = self.get_active_brush()
         self.paint_shader["image_size"] = (width, height)
         self.paint_shader["strength"] = brush.strength
@@ -133,19 +156,22 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
 
         model_view_projection = self.context.region_data.perspective_matrix
         self.preview_shader["model_view_projection"] = utils.matrix_to_tuple(model_view_projection)
-        self.preview_shader["strength"] = brush.strength
+        self.preview_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
 
     def write_blender_image_pixels(self, pixels):
         image = self.get_active_image()
         image.pixels.foreach_set(pixels)
 
     def write_blender_image(self):
-        scope = self.glcontext.scope(framebuffer=self.framebuffer, enable=moderngl.Context.BLEND)
+        if not self.paintbuffer_changed:
+            return
+        scope = self.glcontext.scope(framebuffer=self.paintbuffer, enable=moderngl.Context.BLEND)
         with scope:
-            width = self.framebuffer.width
-            height = self.framebuffer.height
-            pixels = gpu_utils.read_pixel_data_from_framebuffer(width, height, self.framebuffer)
+            width = self.paintbuffer.width
+            height = self.paintbuffer.height
+            pixels = gpu_utils.read_pixel_data_from_framebuffer(width, height, self.paintbuffer)
             self.write_blender_image_pixels(pixels)
+        self.paintbuffer_changed = False            
         self.update_blender_viewport()
 
     def update_blender_viewport(self):

@@ -20,8 +20,7 @@ void main()
     p_frag = particle;
     center = particle.uv * image_size;
 
-    float rel_age = particle.age / particle.max_age;
-    float size = (1-rel_age)*particle.size + rel_age*particle.size*particle_size_age_factor;
+    float size = particle_size(particle, particle_size_age_factor);
     
 
     float aspect = image_size[0] / image_size[1];
