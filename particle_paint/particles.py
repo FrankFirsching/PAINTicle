@@ -85,6 +85,9 @@ class Particles:
         """ Paint all particles into the texture """
         self.painter.draw(self.particles)
 
+    def undo_last_paint(self):
+        self.painter.undo_last_paint()
+
     def clear_particles(self):
         """ Start with an empty set of particles """
         self.particles = []

@@ -97,7 +97,7 @@ class Particle:
         if True:  # Use triangle neighbor info movement
             new_location = \
                 paint_mesh.project_point_to_triangle(self.location, self.tri_index)
-            
+
             new_location, new_tri_index = \
                 paint_mesh.move_over_triangle_boundaries(self.location, new_location, self.tri_index)
             self.location = new_location
@@ -107,34 +107,3 @@ class Particle:
             if result:
                 self.location = location
                 self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
-
-    def generateStroke(self, context, overallStrength, settings):
-        region = context['region']
-        mousePos = self.uvToMousePos(region, self.uv)
-        rel_age = self.age / self.max_age
-        return {
-                 "name":"ParticleStroke",
-                 "is_start": False,
-                 "location": self.location,
-                 "mouse": mousePos,
-                 "pen_flip": False,
-                 "pressure": (1-rel_age)*overallStrength,
-                 "size": utils.lerp(rel_age, self.particle_size, self.particle_size * settings.particle_size_age_factor),
-                 "time": 0,
-                 "mouse_event": mousePos,
-                 "x_tilt": 0,
-                 "y_tilt": 0
-               }
-
-    def uvToMousePos(self, region, uv):
-        """ Calculating a pixel position on the Image Editor for given UV
-            coordinate. We're usingthe region_to_view function, since it's more
-            accurate, as view_to_region rounds to integers. """
-        diff_length = min(region.width, region.height)
-        view00 = region.view2d.region_to_view(0, 0)
-        view11 = region.view2d.region_to_view(diff_length, diff_length)
-        view_diff = (view11[0]-view00[0], view11[1]-view00[1])
-        origin = (-view00[0]/view_diff[0]*diff_length, -view00[1]/view_diff[1]*diff_length)
-        upper_left = ((1-view00[0])/view_diff[0]*diff_length, (1-view00[1])/view_diff[1]*diff_length)
-        scale = (upper_left[0]-origin[0], upper_left[1]-origin[1])
-        return [uv[0]*scale[0]+origin[0], uv[1]*scale[1]+origin[1]]

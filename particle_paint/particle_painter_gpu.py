@@ -12,6 +12,7 @@ import bpy
 import gpu
 import mathutils
 import bgl
+import numpy as np
 
 import array
 import struct
@@ -28,6 +29,8 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         super().__init__(context)
         self.glcontext = moderngl.create_context()
         self.paintbuffer = None
+        self.undoimage = None  # Managing own undo, since blender's undo system won't capture image changes correctly
+        self.from_new_sim = True  # A flag if we're painting from an empty simulation (used to manage undo image)
         self.last_active_image_slot = None
         self.preview_shader = gpu_utils.load_shader("particle3d", self.glcontext, ["particle"])
         self.paint_shader = gpu_utils.load_shader("particle2d", self.glcontext, ["particle"])
@@ -54,7 +57,6 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             ParticlePainterGPU.draw_handler =bpy.types.SpaceView3D.draw_handler_add(ParticlePainterGPU._draw_viewport,
                                                                                     (self,), "WINDOW", "POST_VIEW")
 
-
     def _draw_viewport(self):
         """ Callback function from blender to draw our particles into the viewport. Don't call by yourself! """
         bgl.glDepthMask(False)  # Need to use bgl here, since moderngl doesn't allow modifying the depth mask
@@ -67,42 +69,67 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         preview_vertex_array.render(moderngl.vertex_array.POINTS)
 
     def draw(self, particles):
+        """ Draw the given particles into the paint buffer and sync to blender's image in case we're not in
+            preview mode. In preview mode sync to blender's image only if we reached 0 particles again after
+            simulation is 'done'. """
+            
         num_particles = len(particles)
         self.update_paintbuffer()
         self.update_vertex_buffer(particles)
         self.update_uniforms()
         if num_particles == 0:
-            self.write_blender_image()
+            if self.paintbuffer_changed:
+                self.write_blender_image()
+            self.from_new_sim = True  # Next paint call will be from an new simulation
             return  # Nothing to draw
 
-        # Draw into the texture framebuffer
+        if self.from_new_sim:
+            # Before drawing the first set of particles capture the internal undo image
+            self.undoimage = self.capture_active_image()
+
+        # We're either inside a current particle sim or just started a new one, so it's not from new anymore
+        self.from_new_sim = False
+
+        # Draw into the texture paint framebuffer
         scope = self.glcontext.scope(framebuffer=self.paintbuffer, enable=moderngl.Context.BLEND)
         with scope:
             self.paintbuffer_changed = True
             self.paint_vertex_array.render(moderngl.vertex_array.POINTS, num_particles)
 
         if self.use_preview:
-            self.update_blender_viewport()
+            self.context.area.tag_redraw()
         else:
             self.write_blender_image()
 
+    def capture_active_image(self):
+        result = None
+        source_image = self.get_active_image()
+        if source_image is not None:
+            result = np.empty(source_image.size[0]*source_image.size[1]*4, dtype=np.float32)
+            source_image.pixels.foreach_get(result)
+        return result
+    
     def update_paintbuffer(self):
         image = self.get_active_image()
         image_size = gpu_utils.max_image_size(image)
         if (self.paintbuffer is None or
                 image_size[0] != self.paintbuffer.width or
                 image_size[1] != self.paintbuffer.height):
-            self.paintbuffer = gpu_utils.gpu_framebuffer_for_image(image, self.glcontext)
+            if image_size[0] > 0 and image_size[1] > 0:
+                self.paintbuffer = gpu_utils.gpu_framebuffer_for_image(image, self.glcontext)
+            else:
+                self.paintbuffer = None
         image_slot = self.get_active_image_slot()
-        if image_slot != self.last_active_image_slot:
+        if image_slot != self.last_active_image_slot and self.paintbuffer is not None:
             # Fill the original image into the paintbuffer
             self.context.window.cursor_modal_set("WAIT")
-            data = array.array("f", image.pixels)
+            data = self.capture_active_image()
             self.paintbuffer.color_attachments[0].write(data)
             self.paintbuffer_changed = False
             self.last_active_image_slot = image_slot
             preview_activated = self.paintbuffer.width*self.paintbuffer.height > 1024*1024
             self.set_use_preview(preview_activated)
+            self.undoimage = None
             self.context.window.cursor_modal_restore()
 
     def update_vertex_buffer(self, particles: typing.Iterable[particle.Particle]):
@@ -163,19 +190,23 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         image.pixels.foreach_set(pixels)
 
     def write_blender_image(self):
-        if not self.paintbuffer_changed:
-            return
         scope = self.glcontext.scope(framebuffer=self.paintbuffer, enable=moderngl.Context.BLEND)
         with scope:
             width = self.paintbuffer.width
             height = self.paintbuffer.height
             pixels = gpu_utils.read_pixel_data_from_framebuffer(width, height, self.paintbuffer)
             self.write_blender_image_pixels(pixels)
-        self.paintbuffer_changed = False            
+        self.paintbuffer_changed = False
         self.update_blender_viewport()
 
+    def undo_last_paint(self):
+        if self.undoimage is not None:
+            self.paintbuffer.color_attachments[0].write(self.undoimage)
+            self.paintbuffer_changed = True
+            self.write_blender_image()
+
     def update_blender_viewport(self):
-        # BIG HACK: None of the update, gl_touch methods of the image 
+        # BIG HACK: None of the update, gl_touch methods of the image
         # and neither tag_redraw of the view_3d functions work to trigger
         # rerendering the view. So we wiggle the view a very small amount around
         # the view axis. To not accumulate the small amounts and get a drift, we

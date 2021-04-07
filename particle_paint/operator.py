@@ -14,7 +14,7 @@ class PaintOperator(bpy.types.Operator):
     """Paint on the object using particles"""
     bl_idname = "view3d.particle_paint"
     bl_label = "Particle Paint"
-    bl_options = {'UNDO_GROUPED'}
+    # bl_options = {'REGISTER', 'UNDO', 'UNDO_GROUPED'}
     bl_undo_group = "ParticlePaint"
 
     def __init__(self):
@@ -71,7 +71,10 @@ class PaintOperator(bpy.types.Operator):
 
             return {'RUNNING_MODAL'}
 
-        elif event.type in {'ESC'}:
+        elif event.type == 'U':
+            if event.value == 'RELEASE':
+                self._particles.undo_last_paint()
+        elif event.type == 'ESC':
             # We end the tool with a right click
             context.area.header_text_set(None)
             self.setTimer(context, False)

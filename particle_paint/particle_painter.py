@@ -40,7 +40,9 @@ class ParticlePainter(ABC):
 
     def get_active_image(self):
         """ Get the texture we're painting to """
-        return self.context.object.active_material.texture_paint_images[self.get_active_image_slot()]
+        image_slot = self.get_active_image_slot()
+        paint_images = self.context.object.active_material.texture_paint_images
+        return paint_images[image_slot] if image_slot<len(paint_images) else None
 
     def get_particle_settings(self):
         return self.context.scene.particle_paint_settings

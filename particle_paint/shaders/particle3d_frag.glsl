@@ -20,10 +20,10 @@ vec3 srgb_to_linear(in vec3 c)
 
 void main()
 {
-  // Discard everything outside of the circular point shape
   vec2 offset = 2*gl_PointCoord.xy - vec2(1);
   // Set the particles's color (drawing to viewport, which is linear color space)
   frag_color = vec4(srgb_to_linear(p_frag.color), particle_alpha(p_frag, offset));
+  // Discard everything outside of the circular point shape
   if(frag_color.a<0)
     discard;
 }
