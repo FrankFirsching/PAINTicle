@@ -3,6 +3,7 @@
 # <pep8 compliant>
 
 import pytest
+import types
 
 from particle_paint import dependencies
 
@@ -14,3 +15,8 @@ def test_is_available():
     assert dependencies.is_dependency_installed("moderngl") is True
     assert dependencies.are_dependencies_installed() is True
     assert dependencies.load_dependency("moderngl") is not None
+
+
+def test_import():
+    import moderngl
+    assert isinstance(moderngl, types.ModuleType)

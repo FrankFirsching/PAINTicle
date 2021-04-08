@@ -8,14 +8,16 @@ from particle_paint import particle_painter_gpu
 from particle_paint import settings
 
 import tstutils
+from tstutils import default_scene
 
 
-def test_particle():
+@pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
+def test_particle_visual_attribs(default_scene):
     particle_settings = bpy.context.scene.particle_paint_settings
     p = particle.Particle(mathutils.Vector(), 0, mathutils.Color((0.3, 0.4, 0.5)), None, particle_settings)
     assert p
     visual_attribs = []
-    painter = particle_painter_gpu.ParticlePainterGPU(bpy.context)
+    painter = particle_painter_gpu.ParticlePainterGPU(tstutils.get_default_context())
     painter.append_visual_properties(visual_attribs, p)
     assert visual_attribs[0] == p.location[0]
     assert visual_attribs[1] == p.location[1]

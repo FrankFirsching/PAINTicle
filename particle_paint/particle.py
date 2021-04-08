@@ -25,7 +25,7 @@ class Particle:
         self.barycentric = mathutils.Vector((0, 0, 0))
         self.normal = mathutils.Vector((0, 0, 0))
         self.uv = mathutils.Vector((0, 0))
-        
+
         rnd = Particle.rnd
         random_size = rnd.uniform(-particle_settings.particle_size_random,
                                    particle_settings.particle_size_random)
@@ -66,16 +66,13 @@ class Particle:
         self.age += time_step
         self.update_location_dependent_properties(paint_mesh)
 
-    def get_uv(self):
-        return self.uv
-
     def update_location_dependent_properties(self, paint_mesh):
         self.project_back_to_triangle(paint_mesh)
         self.barycentric = paint_mesh.barycentrics(self.location, self.tri_index)
 
         mesh = paint_mesh.mesh
         tri = mesh.loop_triangles[self.tri_index]
-        n = [mesh.vertices[i].normal for i in tri.vertices]
+        n = [mathutils.Vector(n) for n in tri.split_normals]
 
         uvMap = mesh.uv_layers.active
         uv = [uvMap.data[i].uv.copy() for i in tri.loops]
@@ -97,7 +94,6 @@ class Particle:
         if True:  # Use triangle neighbor info movement
             new_location = \
                 paint_mesh.project_point_to_triangle(self.location, self.tri_index)
-
             new_location, new_tri_index = \
                 paint_mesh.move_over_triangle_boundaries(self.location, new_location, self.tri_index)
             self.location = new_location

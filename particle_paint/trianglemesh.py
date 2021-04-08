@@ -14,6 +14,7 @@ class TriangleMesh:
         if (not mesh.polygons):
             raise Error("ERROR: Mesh doesn't have polygons")
         self.mesh = mesh
+        self.mesh.calc_normals_split()
         self.mesh.calc_loop_triangles()
         self.build_poly_maps()
         self.build_back_refs()
