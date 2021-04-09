@@ -3,11 +3,11 @@ from bpy.props import BoolProperty
 from bpy.props import FloatVectorProperty
 from bpy.props import PointerProperty
 from bpy.types import PropertyGroup
-from particle_paint.physics import Physics
+from painticle.physics import Physics
 
 
 class Settings(PropertyGroup):
-    """ The settings object for the particle paint tool """
+    """ The settings object for the painticle tool """
     flow_rate: FloatProperty(name="Number of particles per second",
                                  description="Specifies the number of particles emitted per second from the brush.",
                                  default=50, min=0.0, soft_min=0.0, soft_max=100,

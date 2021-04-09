@@ -5,7 +5,7 @@
 import pytest
 import types
 
-from particle_paint import dependencies
+from painticle import dependencies
 
 import tstutils
 

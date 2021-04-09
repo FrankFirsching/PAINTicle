@@ -1,4 +1,4 @@
-// Particle Paint shader
+// PAINTicle shader
 //
 // Emits a quad for each point to draw the particles
 

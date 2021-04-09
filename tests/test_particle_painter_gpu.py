@@ -3,9 +3,9 @@ import pytest
 import bpy
 import mathutils
 
-from particle_paint import particle
-from particle_paint import particle_painter_gpu
-from particle_paint import settings
+from painticle import particle
+from painticle import particle_painter_gpu
+from painticle import settings
 
 import tstutils
 from tstutils import default_scene
@@ -13,7 +13,7 @@ from tstutils import default_scene
 
 @pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
 def test_particle_visual_attribs(default_scene):
-    particle_settings = bpy.context.scene.particle_paint_settings
+    particle_settings = bpy.context.scene.painticle_settings
     p = particle.Particle(mathutils.Vector(), 0, mathutils.Color((0.3, 0.4, 0.5)), None, particle_settings)
     assert p
     visual_attribs = []

@@ -12,7 +12,7 @@ import struct
 import moderngl
 import numpy as np
 
-from particle_paint import gpu_utils
+from painticle import gpu_utils
 
 import tstutils
 
@@ -20,7 +20,7 @@ import tstutils
 def test_shader_loading():
     source = gpu_utils.load_shader_source("particle2d", "frag")
     assert source is not None
-    assert source.startswith("// Particle Paint shader")
+    assert source.startswith("// PAINTicle shader")
 
 
 @pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")

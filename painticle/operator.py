@@ -4,7 +4,7 @@ from mathutils import Vector
 import cProfile, pstats, io
 import time
 
-import particle_paint.particles
+import painticle.particles
 
 
 # This class is the blender operator interface. It cares about mouse and pen
@@ -12,8 +12,8 @@ import particle_paint.particles
 # See there for the real painting logic.
 class PaintOperator(bpy.types.Operator):
     """Paint on the object using particles"""
-    bl_idname = "view3d.particle_paint"
-    bl_label = "Particle Paint"
+    bl_idname = "view3d.painticle"
+    bl_label = "PAINTicle"
     # bl_options = {'REGISTER', 'UNDO', 'UNDO_GROUPED'}
     bl_undo_group = "ParticlePaint"
 
@@ -41,7 +41,7 @@ class PaintOperator(bpy.types.Operator):
                 # Keep the tool running
                 return {'RUNNING_MODAL'}
         elif event.type == 'TIMER':
-            settings = context.scene.particle_paint_settings
+            settings = context.scene.painticle_settings
             delta_t = 0
             currenttime = time.time_ns()
             if self.lastcall != 0:
@@ -64,7 +64,7 @@ class PaintOperator(bpy.types.Operator):
                 self.lastcall = time.time_ns()
                 self._particles.clear_particles()
             else:
-                settings = context.scene.particle_paint_settings
+                settings = context.scene.painticle_settings
                 if settings.stop_painting_on_mouse_release:
                     self.setTimer(context, False)
                 self.endProfile()
@@ -119,7 +119,7 @@ class PaintOperator(bpy.types.Operator):
                 rv3d.view_perspective = 'PERSP'
 
             self._left_mouse_pressed = False
-            self._particles = particle_paint.particles.Particles(context)
+            self._particles = painticle.particles.Particles(context)
 
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}

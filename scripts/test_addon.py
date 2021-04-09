@@ -5,7 +5,7 @@ import os
 
 import argparse
 
-parser = argparse.ArgumentParser(description='Unit test starter for particle_paint blender addon.')
+parser = argparse.ArgumentParser(description='Unit test starter for painticle blender addon.')
 parser.add_argument('--cov', help="Perform code coverage", action='store_true')
 parser.add_argument('--dbg', help="When debugging don't capture at all", action='store_true')
 parser.add_argument('--ui', help="Allow some UI related tests, by not running blender in -b mode", action='store_true')
@@ -14,7 +14,7 @@ args = parser.parse_args()
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 tests_results_path = os.path.join(script_dir, "..", "tests_results")
-addon_path = os.path.join(script_dir, "..", "particle_paint")
+addon_path = os.path.join(script_dir, "..", "painticle")
 
 os.chdir(tests_results_path)
 

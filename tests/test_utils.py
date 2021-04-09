@@ -2,7 +2,7 @@ import pytest
 
 import mathutils
 
-from particle_paint import utils
+from painticle import utils
 
 import tstutils
 

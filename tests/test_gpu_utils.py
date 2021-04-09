@@ -6,7 +6,7 @@ import pytest
 import bpy
 import moderngl
 
-from particle_paint import gpu_utils
+from painticle import gpu_utils
 
 import tstutils
 

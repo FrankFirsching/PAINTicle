@@ -1,4 +1,4 @@
-// Particle Paint shader
+// PAINTicle shader
 //
 // Texturize the blown-up particle quad with a soft falloff
 

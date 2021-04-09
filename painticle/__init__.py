@@ -45,13 +45,13 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.particle_paint_settings = bpy.props.PointerProperty(type=settings.Settings)
+    bpy.types.Scene.painticle_settings = bpy.props.PointerProperty(type=settings.Settings)
 
 
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
-    del bpy.types.Scene.particle_paint_settings
+    del bpy.types.Scene.painticle_settings
 
 
 if __name__ == "__main__":

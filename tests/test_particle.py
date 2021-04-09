@@ -7,8 +7,8 @@ import bpy
 import mathutils
 import sys
 
-from particle_paint import particle
-from particle_paint import trianglemesh
+from painticle import particle
+from painticle import trianglemesh
 
 import tstutils
 
@@ -20,7 +20,7 @@ def test_mesh():
 
 
 def test_particle(test_mesh):
-    particle_settings = bpy.context.scene.particle_paint_settings
+    particle_settings = bpy.context.scene.painticle_settings
     loc = mathutils.Vector((0.2, 0.7, 1))
     tri_index = 0
     color = mathutils.Color((0.5, 0.6, 0.7))

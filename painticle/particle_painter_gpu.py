@@ -1,4 +1,4 @@
-# The particle painter, that's using the gpu directly
+# The painticleer, that's using the gpu directly
 
 # <pep8 compliant>
 
@@ -21,7 +21,7 @@ import moderngl
 
 
 class ParticlePainterGPU(particle_painter.ParticlePainter):
-    """ This particle painter is using the GPU to draw the particles. """
+    """ This painticleer is using the GPU to draw the particles. """
 
     draw_handler = None
 

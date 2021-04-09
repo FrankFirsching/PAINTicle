@@ -5,7 +5,7 @@ import bpy
 import mathutils
 import sys
 
-from particle_paint.utils import Error
+from painticle.utils import Error
 
 class TriangleMesh:
     def __init__(self, object):

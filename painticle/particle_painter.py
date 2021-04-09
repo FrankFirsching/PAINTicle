@@ -45,4 +45,4 @@ class ParticlePainter(ABC):
         return paint_images[image_slot] if image_slot<len(paint_images) else None
 
     def get_particle_settings(self):
-        return self.context.scene.particle_paint_settings
+        return self.context.scene.painticle_settings

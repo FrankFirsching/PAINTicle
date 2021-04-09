@@ -2,7 +2,7 @@ import pytest
 import bpy
 import mathutils    
 
-from particle_paint import trianglemesh
+from painticle import trianglemesh
 
 import tstutils
 

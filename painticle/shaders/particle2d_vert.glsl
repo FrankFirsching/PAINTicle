@@ -1,4 +1,4 @@
-// Particle Paint shader
+// PAINTicle shader
 //
 // Project the particle positions into homogeneous clip space
 
