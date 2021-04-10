@@ -13,14 +13,15 @@
 
 from . import operator
 from . import settings
-from . import panel
+from . import settings_panel
 from . import physics
+from . import preferences
 from . import preferences_panel
 from . import utils
 import bpy
 
 bl_info = {
-    "name": "ParticlePaint",
+    "name": "PAINTicle",
     "author": "Frank Firsching",
     "description": "Paint textures using particle systems",
     "blender": (2, 80, 0),
@@ -34,10 +35,11 @@ classes = (
     operator.PaintOperator,
     physics.Physics,
     settings.Settings,
-    panel.ParticlePaintPresetsMenu,
-    panel.AddPresetParticleSettings,
-    panel.ParticlePaintMainPanel,
-    panel.ParticlePaintPhysicsPanel,
+    settings_panel.ParticlePaintPresetsMenu,
+    settings_panel.AddPresetParticleSettings,
+    settings_panel.ParticlePaintMainPanel,
+    settings_panel.ParticlePaintPhysicsPanel,
+    preferences.Preferences,
     preferences_panel.PreferencesPanel
 )
 

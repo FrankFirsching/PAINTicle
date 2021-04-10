@@ -7,6 +7,7 @@ from . import gpu_utils
 from . import dependencies
 from . import particle
 from . import utils
+from . import preferences
 
 import bpy
 import gpu
@@ -37,6 +38,9 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.vertex_buffer = self.glcontext.buffer(reserve=1)
         self.paint_vertex_array = self.vao_definition(self.paint_shader)
         self.paintbuffer_changed = False
+        # We're using the area of the image as preview threshold, preference specifies the edge length
+        self.preview_threshold = preferences.get_instance(context).preview_threshold_edge
+        self.preview_threshold *= self.preview_threshold
         # A hack for the update problem
         self.roll_factor = 1
         self.use_preview = False
@@ -68,7 +72,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         preview_vertex_array = self.vao_definition(self.preview_shader)
         preview_vertex_array.render(moderngl.vertex_array.POINTS)
 
-    def draw(self, particles):
+    def draw(self, particles, time_step):
         """ Draw the given particles into the paint buffer and sync to blender's image in case we're not in
             preview mode. In preview mode sync to blender's image only if we reached 0 particles again after
             simulation is 'done'. """
@@ -76,7 +80,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         num_particles = len(particles)
         self.update_paintbuffer()
         self.update_vertex_buffer(particles)
-        self.update_uniforms()
+        self.update_uniforms(time_step)
         if num_particles == 0:
             if self.paintbuffer_changed:
                 self.write_blender_image()
@@ -108,7 +112,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             result = np.empty(source_image.size[0]*source_image.size[1]*4, dtype=np.float32)
             source_image.pixels.foreach_get(result)
         return result
-    
+
     def update_paintbuffer(self):
         image = self.get_active_image()
         image_size = gpu_utils.max_image_size(image)
@@ -127,7 +131,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             self.paintbuffer.color_attachments[0].write(data)
             self.paintbuffer_changed = False
             self.last_active_image_slot = image_slot
-            preview_activated = self.paintbuffer.width*self.paintbuffer.height > 1024*1024
+            preview_activated = self.paintbuffer.width*self.paintbuffer.height > self.preview_threshold
             self.set_use_preview(preview_activated)
             self.undoimage = None
             self.context.window.cursor_modal_restore()
@@ -173,12 +177,13 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             sizes.append((x))
         return self.glcontext.vertex_array(shader, [(self.vertex_buffer, " ".join(sizes), *names)])
 
-    def update_uniforms(self):
+    def update_uniforms(self, time_step):
         width = self.paintbuffer.width
         height = self.paintbuffer.height
         brush = self.get_active_brush()
         self.paint_shader["image_size"] = (width, height)
         self.paint_shader["strength"] = brush.strength
+        self.paint_shader['time_step'] = time_step
         self.paint_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
 
         model_view_projection = self.context.region_data.perspective_matrix

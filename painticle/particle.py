@@ -49,21 +49,20 @@ class Particle:
         if paint_mesh is not None:
             self.update_location_dependent_properties(paint_mesh)
 
-    def move(self, physics: physics.Physics, paint_mesh, delta_t):
+    def move(self, physics: physics.Physics, paint_mesh, delta_t: float):
         ortho_force = physics.gravity.dot(self.normal) * self.normal
         plane_force = physics.gravity - ortho_force
         friction_force = ortho_force * physics.friction_coefficient
         # gravity on place and friction
         applied_force = plane_force - friction_force
-        time_step = min(physics.max_time_step, delta_t)
         # Improved Euler (midpoint) integration step
         new_acceleration = applied_force/self.mass
-        new_speed = self.speed + 0.5*time_step*(self.acceleration + new_acceleration)
-        new_location = self.location + 0.5*time_step*(self.speed + new_speed)
+        new_speed = self.speed + 0.5 * delta_t * (self.acceleration + new_acceleration)
+        new_location = self.location + 0.5 * delta_t * (self.speed + new_speed)
         self.acceleration = new_acceleration
         self.speed = new_speed
         self.location = new_location
-        self.age += time_step
+        self.age += delta_t
         self.update_location_dependent_properties(paint_mesh)
 
     def update_location_dependent_properties(self, paint_mesh):

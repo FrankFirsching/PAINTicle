@@ -81,9 +81,9 @@ class Particles:
             if p.age > p.max_age:
                 del self.particles[i]
 
-    def paint_particles(self, context: bpy.types.Context):
+    def paint_particles(self, time_step: float):
         """ Paint all particles into the texture """
-        self.painter.draw(self.particles)
+        self.painter.draw(self.particles, time_step)
 
     def undo_last_paint(self):
         self.painter.undo_last_paint()

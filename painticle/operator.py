@@ -32,7 +32,7 @@ class PaintOperator(bpy.types.Operator):
         """ Callback, if some event was happening """
 
         mouseOutsideOfArea = self.isMouseOutsideOfArea(context.area, event)
-        if not self._left_mouse_pressed and mouseOutsideOfArea and event.type!='TIMER':
+        if not self._left_mouse_pressed and mouseOutsideOfArea and event.type != 'TIMER':
             # Ignore everything, if not painting and outside
             return {'PASS_THROUGH'}
 
@@ -42,22 +42,20 @@ class PaintOperator(bpy.types.Operator):
                 return {'RUNNING_MODAL'}
         elif event.type == 'TIMER':
             settings = context.scene.painticle_settings
-            delta_t = 0
             currenttime = time.time_ns()
-            if self.lastcall != 0:
-                delta_t = (currenttime - self.lastcall) * 1e-9
-            self.lastcall = time.time_ns()
+            delta_t = self.calc_time_step(currenttime, settings.physics.max_time_step)
+            self.lastcall = currenttime
             if self._left_mouse_pressed:
                 self._particles.shoot(context, event, delta_t, settings)
             self._particles.move_particles(settings.physics, delta_t)
-            self._particles.paint_particles(context)
+            self._particles.paint_particles(delta_t)
             if not settings.stop_painting_on_mouse_release and not self._left_mouse_pressed:
                 if self._particles.numParticles() == 0:
                     self.setTimer(context, False)
 
         elif event.type == 'LEFTMOUSE':
             # Track the mouse press state
-            self._left_mouse_pressed = (event.value=="PRESS")
+            self._left_mouse_pressed = (event.value == "PRESS")
             if self._left_mouse_pressed:
                 self.startProfile()
                 self.setTimer(context, True)
@@ -82,6 +80,14 @@ class PaintOperator(bpy.types.Operator):
             return {'FINISHED'}
 
         return {'PASS_THROUGH'}
+
+    def calc_time_step(self, currenttime: float, max_time_step: float):
+        delta_t = 0
+        if self.lastcall != 0:
+            # unit of given time is nanosecons. time_step is seconds.
+            delta_t = (currenttime - self.lastcall) * 1e-9
+        delta_t = min(max_time_step, delta_t)
+        return delta_t
 
     def setTimer(self, context, onOff):
         wm = context.window_manager

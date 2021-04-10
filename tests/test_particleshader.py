@@ -33,7 +33,8 @@ def test_draw_offscreen():
     assert shader is not None
     shader["image_size"] = (width, height)
     shader["particle_size_age_factor"] = 2
-    shader["strength"] = 1
+    shader["time_step"] = 0.5
+    shader["strength"] = 2
 
     offset = 0.2
     # Semantics of the values:

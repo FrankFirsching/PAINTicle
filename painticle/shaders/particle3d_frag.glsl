@@ -12,8 +12,8 @@ uniform vec2 image_size;
 vec3 srgb_to_linear(in vec3 c)
 {
     bvec3 cutoff = lessThan(c, vec3(0.04045));
-    vec3 higher = pow((c + vec3(0.055))/vec3(1.055), vec3(2.4));
-    vec3 lower = c/vec3(12.92);
+    vec3 higher = pow((c + 0.055)/1.055, vec3(2.4));
+    vec3 lower = c/12.92;
 
     return mix(higher, lower, cutoff);
 }
