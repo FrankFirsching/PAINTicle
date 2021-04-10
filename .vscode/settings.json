@@ -1,6 +1,6 @@
 {
     "blender.addon.loadDirectory": "./painticle",
-    "blender.addon.moduleName": "./painticle",
+    "blender.addon.moduleName": "painticle",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.linting.pycodestyleEnabled": true,
