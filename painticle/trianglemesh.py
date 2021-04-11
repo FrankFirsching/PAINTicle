@@ -35,18 +35,16 @@ class TriangleMesh:
         return None
 
     def barycentrics(self, p, tri_index,
-                     b0=mathutils.Vector((1,0,0)),
-                     b1=mathutils.Vector((0,1,0)),
-                     b2=mathutils.Vector((0,0,1))):
+                     b0=mathutils.Vector((1, 0, 0)),
+                     b1=mathutils.Vector((0, 1, 0)),
+                     b2=mathutils.Vector((0, 0, 1))):
         tri = self.mesh.loop_triangles[tri_index]
-        tri_p = [self.mesh.vertices[i].co  for i in tri.vertices]
-        return mathutils.geometry.\
-                    barycentric_transform(p, tri_p[0],tri_p[1],tri_p[2],
-                                          b0, b1, b2)
+        tri_p = [self.mesh.vertices[i].co for i in tri.vertices]
+        return mathutils.geometry.barycentric_transform(p, tri_p[0], tri_p[1], tri_p[2], b0, b1, b2)
 
     def project_point_to_triangle(self, p, tri_index):
         tri = self.mesh.loop_triangles[tri_index]
-        tri_p = [self.mesh.vertices[i].co  for i in tri.vertices]
+        tri_p = [self.mesh.vertices[i].co for i in tri.vertices]
         n = tri.normal
         v = tri_p[0]-p
         offset = v.project(n)
@@ -58,19 +56,28 @@ class TriangleMesh:
         # project p onto the next triangle
         baries = self.barycentrics(p, tri_index)
         visited_triangles = set()
-        while not all(bary>0 for bary in baries) and \
+        while not all(bary > 0 for bary in baries) and \
               not tri_index in visited_triangles:
             visited_triangles.add(tri_index)
             neighbors = self.neighbors[tri_index]
-            if baries[0]<0:
-                tri_index = neighbors[1]//3
-            elif baries[1]<0:
-                tri_index = neighbors[2]//3
+            if baries[0] < 0:
+                if neighbors[1] is not None:
+                    tri_index = neighbors[1]//3
+                else:
+                    return p, tri_index, False
+            elif baries[1] < 0:
+                if neighbors[2] is not None:
+                    tri_index = neighbors[2]//3
+                else:
+                    return p, tri_index, False
             else:
-                tri_index = neighbors[0]//3
+                if neighbors[1] is not None:
+                    tri_index = neighbors[0]//3
+                else:
+                    return p, tri_index, False
             p = self.project_point_to_triangle(p, tri_index)
             baries = self.barycentrics(p, tri_index)
-        return p,tri_index
+        return p, tri_index, True
 
     def build_poly_maps(self):
         """ Builds 2 maps, that allow mapping from triangles to polygons and
@@ -90,7 +97,7 @@ class TriangleMesh:
         for tri in self.mesh.loop_triangles:
             for i in range(3):
                 v = tri.vertices[i]
-                if self.back_refs[v]!=None:
+                if self.back_refs[v] is not None:
                     self.back_refs[v].append(tri.index*3+i)
                 else:
                     self.back_refs[v] = [tri.index*3+i]
@@ -102,17 +109,18 @@ class TriangleMesh:
             neighbors = [None]*3
             for i in range(3):
                 v = tri.vertices[i]
-                vNext = tri.vertices[(i+1)%3]
+                vNext = tri.vertices[(i+1) % 3]
                 possibleNeighbors = self.back_refs[vNext]
+                neighboringEdge = None
                 for e in possibleNeighbors:
-                    if self.edgeEnd(e)==v:
+                    if self.edgeEnd(e) == v:
                         neighboringEdge = e
                         break
                 neighbors[i] = neighboringEdge
             self.neighbors[tri.index] = neighbors
 
     def edgeStart(self, edgeId):
-        return self.mesh.loop_triangles[edgeId//3].vertices[edgeId%3]
+        return self.mesh.loop_triangles[edgeId//3].vertices[edgeId % 3]
 
     def edgeEnd(self, edgeId):
-        return self.mesh.loop_triangles[edgeId//3].vertices[(edgeId+1)%3]
+        return self.mesh.loop_triangles[edgeId//3].vertices[(edgeId+1) % 3]

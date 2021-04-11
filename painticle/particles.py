@@ -32,7 +32,7 @@ class Particles:
     def numParticles(self):
         """ Return the number of simulated particles """
         return len(self.particles)
-    
+
     def shoot(self, context: bpy.types.Context, event, delta_t, particle_settings):
         """ Shoot particles according to the flow rate """
         time_between_particles = 1/particle_settings.flow_rate
@@ -46,7 +46,7 @@ class Particles:
             for i in range(int(num_particles+0.5)):
                 self.shoot_single(context, event, particle_settings)
             self.last_shoot_time = 0
-    
+
     def shoot_single(self, context: bpy.types.Context, event, particle_settings):
         """ Shoot a single particle """        
         paint_size = self.get_brush_size(context)
@@ -57,7 +57,7 @@ class Particles:
         ray_origin, ray_direction = self.get_ray(context,
                                                  event.mouse_x+offset_x,
                                                  event.mouse_y+offset_y)
-        
+
         location, normal, face_index = self.ray_cast_on_object(ray_origin,
                                                                ray_direction)
         if location is not None:
@@ -72,7 +72,7 @@ class Particles:
             p = particle.Particle(location, tri_index, self.get_brush_color(context), self.paint_mesh, particle_settings)
             p.speed = initial_surface_speed
             self.add_particle(p)
-    
+
     def move_particles(self, physics, deltaT):
         """ Simulate gravity """
         for i in range(len(self.particles) - 1, -1, -1):
@@ -115,7 +115,7 @@ class Particles:
         """ Get the ray under the mouse cursor """
         region = context.region
         rv3d = context.region_data
-        coord = x-region.x,y-region.y
+        coord = x-region.x, y-region.y
 
         # get the ray from the viewport and mouse
         ray_direction = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)

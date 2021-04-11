@@ -93,8 +93,11 @@ class Particle:
         if True:  # Use triangle neighbor info movement
             new_location = \
                 paint_mesh.project_point_to_triangle(self.location, self.tri_index)
-            new_location, new_tri_index = \
+            new_location, new_tri_index, was_moved = \
                 paint_mesh.move_over_triangle_boundaries(self.location, new_location, self.tri_index)
+            if not was_moved:
+                # If particle moved over boundary, let it die
+                self.age = self.max_age+1
             self.location = new_location
             self.tri_index = new_tri_index
         else:
