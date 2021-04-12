@@ -1,0 +1,1 @@
+The textures fine_grained_wood are used under CC0 from <https://texturehaven.com/tex/?c=wood&t=fine_grained_wood> authored by Rob Tuytel.
