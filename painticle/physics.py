@@ -22,15 +22,15 @@ class Physics(PropertyGroup):
                                         description="The friction coefficient (how sticky is the surface).",
                                         min=0.0, soft_max=0.1, default=0.01, options=set())
 
-    initial_speed: FloatProperty(name="Initial Speed",
+    initial_speed: FloatProperty(name="Initial speed",
                                  description="The initial speed of the particles, when they are born.",
                                  min=0.0, soft_max=1, default=0.0, options=set())
 
-    initial_speed_random: FloatProperty(name="Initial Speed randomness",
+    initial_speed_random: FloatProperty(name="Initial speed randomization",
                                  description="The random factor of the initial speed.",
                                  min=0.0, max=1, default=0.0, options=set())
 
-    max_time_step: FloatProperty(name="Max. Timestep",
+    max_time_step: FloatProperty(name="Max. timestep",
                                  description="The maximum time step used for the simulation.",
                                  default=0.04, options=set())
 

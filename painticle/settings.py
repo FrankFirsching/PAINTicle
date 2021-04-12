@@ -28,15 +28,15 @@ class Settings(PropertyGroup):
                         description="The average mass of a single particle.",
                         default=50, min=0.0, soft_min=0.0, soft_max=500,
                         options=set())
-    mass_random: FloatProperty(name="Particle mass randomization",
+    mass_random: FloatProperty(name="Mass randomization",
                                description="The possible mass variation of the particles.",
                                default=25, min=0.0, soft_min=0.0, soft_max=500,
                                options=set())
-    max_age: FloatProperty(name="Particle maximum age",
+    max_age: FloatProperty(name="Maximum age",
                            description="The maximum age of an individual particle.",
                            default=2, min=0.0, soft_min=0.0, soft_max=100,
                            options=set())
-    max_age_random: FloatProperty(name="Particle maximum age randomization",
+    max_age_random: FloatProperty(name="Maximum age randomization",
                                   description="The age variation of an individual particle.",
                                   default=1, min=0.0, soft_min=0.0, soft_max=100,
                                   options=set())
