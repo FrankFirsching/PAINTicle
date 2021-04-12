@@ -1,4 +1,19 @@
-# The painticleer, that's using the gpu directly
+# This file is part of PAINTicle.
+#
+# PAINTicle is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PAINTicle is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
+
+# The particle painter, that's using the gpu directly
 
 # <pep8 compliant>
 
@@ -58,8 +73,8 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             ParticlePainterGPU.draw_handler = None
         self.use_preview = onOff
         if ParticlePainterGPU.draw_handler is None and self.use_preview:
-            ParticlePainterGPU.draw_handler =bpy.types.SpaceView3D.draw_handler_add(ParticlePainterGPU._draw_viewport,
-                                                                                    (self,), "WINDOW", "POST_VIEW")
+            ParticlePainterGPU.draw_handler = bpy.types.SpaceView3D.draw_handler_add(ParticlePainterGPU._draw_viewport,
+                                                                                     (self,), "WINDOW", "POST_VIEW")
 
     def _draw_viewport(self):
         """ Callback function from blender to draw our particles into the viewport. Don't call by yourself! """

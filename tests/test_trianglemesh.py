@@ -1,3 +1,20 @@
+# This file is part of PAINTicle.
+#
+# PAINTicle is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PAINTicle is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
+
+# Testing the triangle mesh class
+
 import pytest
 import bpy
 import mathutils    
@@ -41,7 +58,8 @@ def test_project_point_to_triangle(test_mesh):
 def test_move_over_triangle_boundaries(test_mesh):
     p0 = mathutils.Vector((0.2, 0.7, 1))
     p1 = mathutils.Vector((0.7, 0.2, 1.1))
-    p_new, tri_new = test_mesh.move_over_triangle_boundaries(p0, p1, 0)
+    p_new, tri_new, was_moved = test_mesh.move_over_triangle_boundaries(p0, p1, 0)
+    assert was_moved is True
     assert tri_new == 1
     assert p_new == mathutils.Vector((0.7, 0.2, 1))
 
