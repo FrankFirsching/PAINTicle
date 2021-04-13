@@ -30,7 +30,7 @@ def wait_for_debugger_attached():
 
 @pytest.fixture
 def default_scene():
-    open_file("default_scene.blend")
+    bpy.ops.wm.read_homefile(use_factory_startup=True)
 
 
 def open_file(filename):
@@ -51,6 +51,7 @@ def get_default_context():
     for x in dir(bpy.context):
         setattr(fake_context, x, getattr(bpy.context, x))
     return fake_context
+
 
 def has_ui():
     """ Returns true, if blender supports running UI functionality, like creating GPU buffers """

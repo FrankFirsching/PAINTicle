@@ -5,6 +5,8 @@ omit =
     */.local/*
     # and everything from the blender cache
      blender_cache/*
+    # and the tests themselves
+    */tests/*
 
 [report]
 sort = Cover

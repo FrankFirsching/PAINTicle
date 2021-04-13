@@ -85,11 +85,13 @@ class TriangleMesh:
                     tri_index = neighbors[2]//3
                 else:
                     return p, tri_index, False
-            else:
-                if neighbors[1] is not None:
+            elif baries[2] < 0:                
+                if neighbors[0] is not None:
                     tri_index = neighbors[0]//3
                 else:
                     return p, tri_index, False
+            else:
+                raise Error("ERROR: Barycentrics invalid.")
             p = self.project_point_to_triangle(p, tri_index)
             baries = self.barycentrics(p, tri_index)
         return p, tri_index, True

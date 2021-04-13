@@ -17,65 +17,113 @@
 
 import pytest
 import bpy
-import mathutils    
+import mathutils
 
 from painticle import trianglemesh
 
 import tstutils
 
-@pytest.fixture
-def test_mesh():
-    tstutils.open_file("trianglemesh_test.blend")
-    blendobject = bpy.data.objects['test_object']
+def get_triangle_mesh(blend_object_name):
+    blendobject = bpy.data.objects[blend_object_name]
     return trianglemesh.TriangleMesh(blendobject)
 
+@pytest.fixture
+def test_scene():
+    tstutils.open_file('trianglemesh_test.blend')
 
-def test_construction(test_mesh):
-    assert test_mesh is not None
+@pytest.fixture
+def test_cube(test_scene):
+    return get_triangle_mesh('test_cube')
+
+@pytest.fixture
+def test_plane(test_scene):
+    return get_triangle_mesh('test_plane')
+
+
+@pytest.fixture(params=["test_cube", "test_plane", "test_nonmanifold"])
+def test_object(request, test_scene):
+    """ A fixture, that calls the testcase for each test object in our test scene """
+    return get_triangle_mesh(request.param)
+
+def test_construction(test_object):
+    # test we're not raising any exception for any of our test geometries
+    # including non-manifold meshes
+    assert test_object is not None
+
+def test_cube_triangle_2(test_cube):
+    assert test_cube is not None
     # testing, that the face we're working with during other tests is at the right expected location
-    tri = test_mesh.mesh.loop_triangles[2]
-    tri_p = [test_mesh.mesh.vertices[i].co  for i in tri.vertices]
+    tri = test_cube.mesh.loop_triangles[2]
+    tri_p = [test_cube.mesh.vertices[i].co  for i in tri.vertices]
     assert tri_p[0] == mathutils.Vector((1.0, -1.0, -1.0))
     assert tri_p[1] == mathutils.Vector((1.0, -1.0, 1.0))
     assert tri_p[2] == mathutils.Vector((-1.0, -1.0, 1.0))
 
 
-def test_triangle_for_point_on_poly(test_mesh):
+def test_triangle_for_point_on_poly(test_cube, test_plane):
+    # Cube
     p = mathutils.Vector((0.2, 0.7, 1))
-    assert test_mesh.triangle_for_point_on_poly(p, 0) == 0
+    assert test_cube.triangle_for_point_on_poly(p, 0) == 0
     p = mathutils.Vector((0.7, 0.2, 1))
-    assert test_mesh.triangle_for_point_on_poly(p, 0) == 1
+    assert test_cube.triangle_for_point_on_poly(p, 0) == 1
     p = mathutils.Vector((1.7, 1.7, 1))
-    assert test_mesh.triangle_for_point_on_poly(p, 0) is None
+    assert test_cube.triangle_for_point_on_poly(p, 0) is None
+    # Plane
+    p = mathutils.Vector((0.2, 0.7, 0))
+    assert test_plane.triangle_for_point_on_poly(p, 0) == 1
+    p = mathutils.Vector((0.7, 0.2, 0))
+    assert test_plane.triangle_for_point_on_poly(p, 0) == 0
 
 
-def test_project_point_to_triangle(test_mesh):
+def test_project_point_to_triangle(test_cube):
     p = mathutils.Vector((0.2, 0.7, 1.4))
-    p_proj = test_mesh.project_point_to_triangle(p, 0)
+    p_proj = test_cube.project_point_to_triangle(p, 0)
     assert p_proj == mathutils.Vector((0.2, 0.7, 1))
 
 
-def test_move_over_triangle_boundaries(test_mesh):
-    p0 = mathutils.Vector((0.2, 0.7, 1))
-    p1 = mathutils.Vector((0.7, 0.2, 1.1))
-    p_new, tri_new, was_moved = test_mesh.move_over_triangle_boundaries(p0, p1, 0)
+def test_move_over_triangle_boundaries(test_plane):
+    # Inside move 1
+    p0 = mathutils.Vector((0.7, 0.2, 0))
+    p1 = mathutils.Vector((0.2, 0.7, 0.1))
+    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
     assert was_moved is True
     assert tri_new == 1
-    assert p_new == mathutils.Vector((0.7, 0.2, 1))
+    assert p_new == mathutils.Vector((0.2, 0.7, 0))
+    # Inside move 2
+    p0 = mathutils.Vector((0.2, 0.7, 0))
+    p1 = mathutils.Vector((0.7, 0.2, 0.1))
+    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 1)
+    assert was_moved is True
+    assert tri_new == 0
+    assert p_new == mathutils.Vector((0.7, 0.2, 0))
+    # Boundary move 1
+    p0 = mathutils.Vector((0.7, 0.2, 0))
+    p1 = mathutils.Vector((1.2, 0.2, 0))
+    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
+    assert was_moved is False
+    assert tri_new == 0
+    assert p_new == p1
+    # Boundary move 2
+    p0 = mathutils.Vector((0.7, 0.2, 0))
+    p1 = mathutils.Vector((0.7, -1.2, 0))
+    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
+    assert was_moved is False
+    assert tri_new == 0
+    assert p_new == p1
 
 
-def test_mappings(test_mesh):
-    assert len(test_mesh.poly_to_tri) == 6
-    assert len(test_mesh.tri_to_poly) == 12
+def test_mappings(test_cube):
+    assert len(test_cube.poly_to_tri) == 6
+    assert len(test_cube.tri_to_poly) == 12
 
 
-def test_barycentrics(test_mesh):
+def test_barycentrics(test_cube):
     p = mathutils.Vector((0.2, -1.0, 0.6))
-    test_bary = test_mesh.barycentrics(p, 2)
+    test_bary = test_cube.barycentrics(p, 2)
     assert all([test_bary[i] > 0 for i in range(3)])
     assert test_bary[0]+test_bary[1]+test_bary[2] == 1
 
 
-def test_edge_start_end(test_mesh):
-    assert test_mesh.edgeStart(0) == 0
-    assert test_mesh.edgeEnd(0) == 4
+def test_edge_start_end(test_cube):
+    assert test_cube.edgeStart(0) == 0
+    assert test_cube.edgeEnd(0) == 4
