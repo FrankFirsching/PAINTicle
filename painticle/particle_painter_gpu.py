@@ -37,7 +37,7 @@ import moderngl
 
 
 class ParticlePainterGPU(particle_painter.ParticlePainter):
-    """ This painticleer is using the GPU to draw the particles. """
+    """ This particle painter is using the GPU to draw the particles. """
 
     draw_handler = None
 
