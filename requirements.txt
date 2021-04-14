@@ -1,0 +1,1 @@
+https://github.com/FrankFirsching/blender-addon-tester/archive/develop.zip

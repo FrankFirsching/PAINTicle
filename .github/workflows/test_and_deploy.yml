@@ -1,0 +1,77 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # Test the add-on
+  test:
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 4
+      matrix:
+        blender-version: ["2.92"]
+        os: [ubuntu-latest, windows-latest]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      # Setup Python 3.9
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      # Install needed python modules
+      - name: install python modules
+        run: |
+          python --version
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip list
+    # On Linux install a system blender version to get the needed dependencies
+    - name: Set up System Blender for dependencies on Linux
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo apt update
+        sudo apt install -f -y blender
+        sudo apt-get install xvfb
+    # On Linux run with UI
+    - name: Test Blender ${{ matrix.blender-version }} with pytest (Linux version)
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        xvfb-run python scripts/test_addon.py --ui --cov --rev ${{ matrix.blender-version }}
+    # On Windows only run the non-UI tests (hangs otherwise)
+    - name: Test Blender ${{ matrix.blender-version }} with pytest (non Linux version)
+      if: ${{ ! startsWith(matrix.os, 'ubuntu') }}
+      run: |
+        python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
+
+  # And is successful, deploy to Development Build
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Create zip
+        run: |
+          zip -9 -r PAINTicle painticle
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            PAINTicle.zip
