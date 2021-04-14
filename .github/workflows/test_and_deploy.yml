@@ -41,23 +41,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip list
-    # On Linux install a system blender version to get the needed dependencies
-    - name: Set up System Blender for dependencies on Linux
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        sudo apt update
-        sudo apt install -f -y blender
-        sudo apt-get install xvfb
-    # On Linux run with UI
-    - name: Test Blender ${{ matrix.blender-version }} with pytest (Linux version)
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        xvfb-run python scripts/test_addon.py --ui --cov --rev ${{ matrix.blender-version }}
-    # On Windows only run the non-UI tests (hangs otherwise)
-    - name: Test Blender ${{ matrix.blender-version }} with pytest (non Linux version)
-      if: ${{ ! startsWith(matrix.os, 'ubuntu') }}
-      run: |
-        python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
+      # On Linux install a system blender version to get the needed dependencies
+      - name: Set up System Blender for dependencies on Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt update
+          sudo apt install -f -y blender
+          sudo apt-get install xvfb
+      # On Linux run with UI
+      - name: Test Blender ${{ matrix.blender-version }} with pytest (Linux version)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          xvfb-run python scripts/test_addon.py --ui --cov --rev ${{ matrix.blender-version }}
+      # On Windows only run the non-UI tests (hangs otherwise)
+      - name: Test Blender ${{ matrix.blender-version }} with pytest (non Linux version)
+        if: ${{ ! startsWith(matrix.os, 'ubuntu') }}
+        run: |
+          python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
 
   # And is successful, deploy to Development Build
   deploy:
