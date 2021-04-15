@@ -17,6 +17,7 @@
 
 import blender_addon_tester
 import os
+import sys
 
 import argparse
 
@@ -48,5 +49,11 @@ if args.cov:
 else:
     config["pytest_args"] = "--capture=no" if args.dbg else "-rx"
 
-blender_addon_tester.test_blender_addon(addon_path=os.path.abspath(addon_path),
-                                        blender_revision=args.rev, config=config)
+try:
+    exit_value = blender_addon_tester.test_blender_addon(addon_path=os.path.abspath(addon_path),
+                                                         blender_revision=args.rev, config=config)
+except Exception as e:
+    print(e)
+    exit_value = 1
+
+sys.exit(exit_value)
