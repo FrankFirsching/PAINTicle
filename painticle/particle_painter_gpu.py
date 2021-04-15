@@ -91,7 +91,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         """ Draw the given particles into the paint buffer and sync to blender's image in case we're not in
             preview mode. In preview mode sync to blender's image only if we reached 0 particles again after
             simulation is 'done'. """
-            
+
         num_particles = len(particles)
         self.update_paintbuffer()
         self.update_vertex_buffer(particles)

@@ -13,10 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 import bpy
 from mathutils import Vector
 
-import cProfile, pstats, io
+import cProfile
+import pstats
+import io
 import time
 
 import painticle.particles
@@ -37,12 +41,12 @@ class PaintOperator(bpy.types.Operator):
         self._timer = None
         self.lastcall = 0
         self.pr = None
-    
+
     @classmethod
     def poll(cls, context):
         # TODO: Check when to allow activation of operator
         return True
-    
+
     def modal(self, context, event):
         """ Callback, if some event was happening """
 

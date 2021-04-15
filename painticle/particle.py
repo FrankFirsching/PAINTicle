@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 # A class representing a single particle
 
 import array
@@ -22,6 +24,7 @@ import mathutils
 
 from . import physics
 from . import utils
+
 
 class Particle:
     """  A single particle. """
@@ -43,16 +46,16 @@ class Particle:
 
         rnd = Particle.rnd
         random_size = rnd.uniform(-particle_settings.particle_size_random,
-                                   particle_settings.particle_size_random)
+                                  particle_settings.particle_size_random)
         self.particle_size = particle_settings.particle_size+random_size
 
         random_mass = rnd.uniform(-particle_settings.mass_random,
-                                   particle_settings.mass_random)
+                                  particle_settings.mass_random)
         self.mass = particle_settings.mass + random_mass
 
         self.age = 0.0
         random_age = rnd.uniform(-particle_settings.max_age_random,
-                                  particle_settings.max_age_random)
+                                 particle_settings.max_age_random)
         self.max_age = particle_settings.max_age + random_age
 
         col_rand = particle_settings.color_random

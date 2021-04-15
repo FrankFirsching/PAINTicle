@@ -13,10 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 import bpy
 import bl_operators
 
 from . import settings
+
 
 class ParticlePaintPanel:
     """ A mixin class for the concrete panels below """
@@ -91,6 +94,7 @@ class ParticlePaintMainPanel(ParticlePaintPanel, bpy.types.Panel):
         layout.prop(settings, "max_age_random")
         layout.prop(settings, "color_random")
         layout.prop(settings, "stop_painting_on_mouse_release")
+
 
 class ParticlePaintPhysicsPanel(ParticlePaintPanel, bpy.types.Panel):
     """ A sub panel grouping the physics settings """

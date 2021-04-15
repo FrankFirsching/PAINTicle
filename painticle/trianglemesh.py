@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 # A mesh helper class, that allows easy acccess to triangles of polys and to
 # neighbors of a triangle
 
@@ -22,7 +24,11 @@ import sys
 
 from painticle.utils import Error
 
+
 class TriangleMesh:
+    """ A class providing additional mesh operations as blende does. It supports e.g. neighbor information to
+        walk around on the mesh. """
+
     def __init__(self, object):
         self.object = object
         mesh = object.data
@@ -41,12 +47,12 @@ class TriangleMesh:
         for passes in range(2):
             for tri_index in tessellated:
                 bary = self.barycentrics(p, tri_index)
-                if bary[0]>=eps and bary[1]>=eps and bary[2]>=eps:
+                if bary[0] >= eps and bary[1] >= eps and bary[2] >= eps:
                     return tri_index
             # Sometimes, we get a point slightly outside of a polygon, let's
             # treat it as good as possible.
             eps = -0.0001
-        print("WARNING: Couldn't find triangle for",p,"on",face_index)
+        print("WARNING: Couldn't find triangle for", p, "on", face_index)
         return None
 
     def barycentrics(self, p, tri_index,
@@ -71,8 +77,7 @@ class TriangleMesh:
         # project p onto the next triangle
         baries = self.barycentrics(p, tri_index)
         visited_triangles = set()
-        while not all(bary > 0 for bary in baries) and \
-              not tri_index in visited_triangles:
+        while not all(bary > 0 for bary in baries) and tri_index not in visited_triangles:
             visited_triangles.add(tri_index)
             neighbors = self.neighbors[tri_index]
             if baries[0] < 0:
@@ -85,7 +90,7 @@ class TriangleMesh:
                     tri_index = neighbors[2]//3
                 else:
                     return p, tri_index, False
-            elif baries[2] < 0:                
+            elif baries[2] < 0:
                 if neighbors[0] is not None:
                     tri_index = neighbors[0]//3
                 else:
@@ -103,7 +108,7 @@ class TriangleMesh:
         self.tri_to_poly = [None]*len(self.mesh.loop_triangles)
         for tri in self.mesh.loop_triangles:
             self.tri_to_poly[tri.index] = tri.polygon_index
-            if self.poly_to_tri[tri.polygon_index]!=None:
+            if self.poly_to_tri[tri.polygon_index] is not None:
                 self.poly_to_tri[tri.polygon_index].append(tri.index)
             else:
                 self.poly_to_tri[tri.polygon_index] = [tri.index]

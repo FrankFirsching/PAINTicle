@@ -22,6 +22,7 @@ from . import utils
 from . import dependencies
 from . import preferences
 
+
 class PreferencesPanel(bpy.types.AddonPreferences):
     bl_idname = preferences.id
 

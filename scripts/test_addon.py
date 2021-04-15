@@ -22,10 +22,14 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(description='Unit test starter for painticle blender addon.')
-parser.add_argument('--cov', help="Perform code coverage", action='store_true')
-parser.add_argument('--dbg', help="When debugging don't capture at all", action='store_true')
-parser.add_argument('--ui', help="Allow some UI related tests, by not running blender in -b mode", action='store_true')
-parser.add_argument('--rev', help="Specify the blender revision for the test environment (default=2.92)", default="2.92")
+parser.add_argument('--cov', help="Perform code coverage",
+                    action='store_true')
+parser.add_argument('--dbg', help="When debugging don't capture at all",
+                    action='store_true')
+parser.add_argument('--ui', help="Allow some UI related tests, by not running blender in -b mode",
+                    action='store_true')
+parser.add_argument('--rev', help="Specify the blender revision for the test environment (default=2.92)",
+                    default="2.92")
 args = parser.parse_args()
 
 script_dir = os.path.dirname(os.path.realpath(__file__))

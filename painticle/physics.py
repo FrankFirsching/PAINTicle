@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 from bpy.props import FloatProperty
 from bpy.props import FloatVectorProperty
 from bpy.types import PropertyGroup
@@ -29,7 +31,7 @@ class Physics(PropertyGroup):
 
     gravity: FloatVectorProperty(name="Gravity",
                                  description="The gravitational force applied to the particles.",
-                                 default=(0,0,-9.81), options=set(),
+                                 default=(0, 0, -9.81), options=set(),
                                  subtype="ACCELERATION", unit="ACCELERATION",
                                  update=onUpdatePhysicsGravity)
 
@@ -42,14 +44,14 @@ class Physics(PropertyGroup):
                                  min=0.0, soft_max=1, default=0.0, options=set())
 
     initial_speed_random: FloatProperty(name="Initial speed randomization",
-                                 description="The random factor of the initial speed.",
-                                 min=0.0, max=1, default=0.0, options=set())
+                                        description="The random factor of the initial speed.",
+                                        min=0.0, max=1, default=0.0, options=set())
 
     max_time_step: FloatProperty(name="Max. timestep",
                                  description="The maximum time step used for the simulation.",
                                  default=0.04, options=set())
 
     gravityNormalized: FloatVectorProperty(name="Gravity (normalized)",
-                                 description="The normalized gravitational force applied to the particles.",
-                                 default=(0,0,-1), options=set(['HIDDEN']),
-                                 subtype="ACCELERATION", unit="ACCELERATION")
+                                           description="The normalized gravitational force applied to the particles.",
+                                           default=(0, 0, -1), options=set(['HIDDEN']),
+                                           subtype="ACCELERATION", unit="ACCELERATION")

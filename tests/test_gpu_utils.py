@@ -25,6 +25,7 @@ from painticle import gpu_utils
 
 import tstutils
 
+
 @pytest.fixture
 def test_mesh():
     tstutils.open_file("textures_test.blend")
@@ -44,6 +45,7 @@ def test_texture_size_non_tiled(test_mesh):
 
     image_size = gpu_utils.max_image_size(image)
     assert image_size == (1024, 512)
+
 
 # blender currently doesn't allow scripting for UDIM images. It just doesn't provide enough data for the tiles.
 @pytest.mark.xfail

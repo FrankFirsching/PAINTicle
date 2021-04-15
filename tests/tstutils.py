@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 # Utilities for unit tests
 
 import os
@@ -22,7 +24,8 @@ import pytest
 
 def wait_for_debugger_attached():
     import debugpy
-    # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
+    # 5678 is the default attach port in the VS Code debug configurations.
+    # Unless a host and port are specified, host defaults to 127.0.0.1
     debugpy.listen(5678)
     print("Waiting for debugger attach")
     debugpy.wait_for_client()
@@ -64,4 +67,4 @@ def no_ui():
 
 
 def is_close(v1, v2, tolerance):
-    return  (v1 >= v2 - tolerance) and (v1 <= v2 + tolerance)
+    return (v1 >= v2 - tolerance) and (v1 <= v2 + tolerance)

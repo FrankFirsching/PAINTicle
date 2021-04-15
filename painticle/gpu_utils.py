@@ -15,6 +15,8 @@
 
 # Generic blender gpu addons
 
+# <pep8 compliant>
+
 import bpy
 import os
 import numpy as np
@@ -29,7 +31,7 @@ def image_sizes(image):
     """ Thus function shall return all images sizes of all UDIM tiles. However
         currently blender doesn't allow access to the tiles, except their names.
         So we can only work with untiles images """
-    return [image.size] if image is not None else [(0,0)]
+    return [image.size] if image is not None else [(0, 0)]
 
 
 def max_image_size(image):
@@ -60,7 +62,7 @@ def load_shader_source(shader_name: str, stage: str) -> str:
         * 'def' = definitions for each stage
     """
     basepath = os.path.dirname(os.path.realpath(__file__))
-    stage_addition = "" if stage is None or stage=="" else "_"+stage
+    stage_addition = "" if stage is None or stage == "" else "_"+stage
     full_file_name = os.path.join(basepath, "shaders", shader_name+stage_addition+".glsl")
     if not os.path.exists(full_file_name):
         return None
@@ -78,7 +80,8 @@ def _join_shader(definitions_shader, specific_shader, prepend_version=True):
     return version + use_definition + use_specific
 
 
-def load_shader(shader_name, glcontext: moderngl.Context, additional_libs: typing.Iterable[str] = None) -> moderngl.Program:
+def load_shader(shader_name, glcontext: moderngl.Context,
+                additional_libs: typing.Iterable[str] = None) -> moderngl.Program:
     """ Load all shaders for a given shader name """
     vertex_shader = load_shader_source(shader_name, "vert")
     geometry_shader = load_shader_source(shader_name, "geom")

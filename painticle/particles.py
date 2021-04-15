@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 # A particles shooter class
 
 from bpy_extras import view3d_utils
@@ -63,7 +65,7 @@ class Particles:
             self.last_shoot_time = 0
 
     def shoot_single(self, context: bpy.types.Context, event, particle_settings):
-        """ Shoot a single particle """        
+        """ Shoot a single particle """
         paint_size = self.get_brush_size(context)
         angle = 2*math.pi*self.rnd.random()
         distance = paint_size*self.rnd.random()
@@ -78,13 +80,15 @@ class Particles:
         if location is not None:
             ray_direction_unit = ray_direction.normalized()
             view_speed = particle_settings.physics.initial_speed * ray_direction_unit
-            max_initial_random = 0.5 * particle_settings.physics.initial_speed * particle_settings.physics.initial_speed_random
+            physics = particle_settings.physics
+            max_initial_random = 0.5 * physics.initial_speed * physics.initial_speed_random
             view_speed += mathutils.Vector((random.uniform(-max_initial_random, max_initial_random),
                                             random.uniform(-max_initial_random, max_initial_random),
                                             random.uniform(-max_initial_random, max_initial_random)))
             initial_surface_speed = view_speed - view_speed.project(normal)
             tri_index = self.paint_mesh.triangle_for_point_on_poly(location, face_index)
-            p = particle.Particle(location, tri_index, self.get_brush_color(context), self.paint_mesh, particle_settings)
+            brush_color = self.get_brush_color(context)
+            p = particle.Particle(location, tri_index, brush_color, self.paint_mesh, particle_settings)
             p.speed = initial_surface_speed
             self.add_particle(p)
 
@@ -109,7 +113,7 @@ class Particles:
 
     def add_particle(self, particle):
         """ Add a single particle """
-        #if len(self.particles)>0:
+        # if len(self.particles)>0:
         #    return
         self.particles.append(particle)
 

@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 from bpy.props import IntProperty
 from bpy.types import PropertyGroup
 
@@ -31,7 +33,7 @@ def get_instance(context):
 class Preferences(PropertyGroup):
     """ The preferences object for the painticle add-on """
     preview_threshold_edge: IntProperty(name="Preview Mode Threshold",
-                                        description="Performance option:\n"+
+                                        description="Performance option:\n" +
                                                     "Specifies the size of a square texture, that represents the " +
                                                     "largest image size still possible to simulate without falling " +
                                                     "back to preview mode.",

@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 # Testing PAINTicle's utilities
 
 import pytest
@@ -23,13 +25,21 @@ from painticle import utils
 
 import tstutils
 
+
 def test_lerp():
-    assert tstutils.is_close(utils.lerp(0.3,1,2), 1.3, 1e-4)
+    assert tstutils.is_close(utils.lerp(0.3, 1, 2), 1.3, 1e-4)
+
 
 def test_matrix_to_tuple():
     m = mathutils.Matrix()
     # Check identity matrix
-    assert utils.matrix_to_tuple(m) == (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
+    assert utils.matrix_to_tuple(m) == (1, 0, 0, 0,
+                                        0, 1, 0, 0,
+                                        0, 0, 1, 0,
+                                        0, 0, 0, 1)
     # Translation matrix
-    m = mathutils.Matrix.Translation(mathutils.Vector((1,2,3)))
-    assert utils.matrix_to_tuple(m) == (1,0,0,0, 0,1,0,0, 0,0,1,0, 1,2,3,1)
+    m = mathutils.Matrix.Translation(mathutils.Vector((1, 2, 3)))
+    assert utils.matrix_to_tuple(m) == (1, 0, 0, 0,
+                                        0, 1, 0, 0,
+                                        0, 0, 1, 0,
+                                        1, 2, 3, 1)

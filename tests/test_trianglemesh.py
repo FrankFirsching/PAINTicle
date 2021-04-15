@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+# <pep8 compliant>
+
 # Testing the triangle mesh class
 
 import pytest
@@ -23,17 +25,21 @@ from painticle import trianglemesh
 
 import tstutils
 
+
 def get_triangle_mesh(blend_object_name):
     blendobject = bpy.data.objects[blend_object_name]
     return trianglemesh.TriangleMesh(blendobject)
+
 
 @pytest.fixture
 def test_scene():
     tstutils.open_file('trianglemesh_test.blend')
 
+
 @pytest.fixture
 def test_cube(test_scene):
     return get_triangle_mesh('test_cube')
+
 
 @pytest.fixture
 def test_plane(test_scene):
@@ -45,16 +51,18 @@ def test_object(request, test_scene):
     """ A fixture, that calls the testcase for each test object in our test scene """
     return get_triangle_mesh(request.param)
 
+
 def test_construction(test_object):
     # test we're not raising any exception for any of our test geometries
     # including non-manifold meshes
     assert test_object is not None
 
+
 def test_cube_triangle_2(test_cube):
     assert test_cube is not None
     # testing, that the face we're working with during other tests is at the right expected location
     tri = test_cube.mesh.loop_triangles[2]
-    tri_p = [test_cube.mesh.vertices[i].co  for i in tri.vertices]
+    tri_p = [test_cube.mesh.vertices[i].co for i in tri.vertices]
     assert tri_p[0] == mathutils.Vector((1.0, -1.0, -1.0))
     assert tri_p[1] == mathutils.Vector((1.0, -1.0, 1.0))
     assert tri_p[2] == mathutils.Vector((-1.0, -1.0, 1.0))

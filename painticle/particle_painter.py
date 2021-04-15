@@ -38,7 +38,7 @@ class ParticlePainter(ABC):
 
     @abstractmethod
     def shutdown(self):
-        """ Called before the containing particles object is destroyed. Can e.g. be used to unregister draw callbacks """
+        """ Called before the containing particles object is destroyed (e.g. be used to unregister draw callbacks) """
         pass
 
     @abstractmethod
@@ -57,7 +57,7 @@ class ParticlePainter(ABC):
         """ Get the texture we're painting to """
         image_slot = self.get_active_image_slot()
         paint_images = self.context.object.active_material.texture_paint_images
-        return paint_images[image_slot] if image_slot<len(paint_images) else None
+        return paint_images[image_slot] if image_slot < len(paint_images) else None
 
     def get_particle_settings(self):
         return self.context.scene.painticle_settings
