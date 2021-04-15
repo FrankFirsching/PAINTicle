@@ -31,13 +31,17 @@ def install_all():
     total = len(_dependencies)
     wm = bpy.context.window_manager
     wm.progress_begin(0, total)
+    need_reload = False
     try:
         for i, requirement in enumerate(_dependencies):
             if not is_dependency_installed(requirement.name):
-                _install_requirement(requirement)
+                if _install_requirement(requirement):
+                    need_reload = True
             wm.progress_update(i)
     finally:
         wm.progress_end()
+    if need_reload:
+        importlib.invalidate_caches()
 
 
 def is_dependency_installed(module_name):
@@ -78,7 +82,8 @@ def _ensure_local_site_packages():
 
 def _install_requirement(requirement):
     """ Install a python module through pip """
-    subprocess.run([sys.executable, "-m", "pip", "install", str(requirement), "--user"])
+    completed_process = subprocess.run([sys.executable, "-m", "pip", "install", str(requirement), "--user"])
+    return completed_process.returncode == 0
 
 
 def _are_dependencies_installed(self):
