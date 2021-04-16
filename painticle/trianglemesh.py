@@ -77,7 +77,7 @@ class TriangleMesh:
         # project p onto the next triangle
         baries = self.barycentrics(p, tri_index)
         visited_triangles = set()
-        while not all(bary > 0 for bary in baries) and tri_index not in visited_triangles:
+        while not all(bary >= 0 for bary in baries) and tri_index not in visited_triangles:
             visited_triangles.add(tri_index)
             neighbors = self.neighbors[tri_index]
             if baries[0] < 0:

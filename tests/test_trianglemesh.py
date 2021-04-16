@@ -118,6 +118,13 @@ def test_move_over_triangle_boundaries(test_plane):
     assert was_moved is False
     assert tri_new == 0
     assert p_new == p1
+    # Edge move
+    p0 = mathutils.Vector((1.0, 0.2, 0))
+    p1 = mathutils.Vector((1.0, 0.7, 0))
+    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
+    assert was_moved is True
+    assert tri_new == 0
+    assert p_new == mathutils.Vector((1.0, 0.7, 0))
 
 
 def test_mappings(test_cube):
