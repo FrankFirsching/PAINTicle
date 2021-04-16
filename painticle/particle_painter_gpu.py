@@ -78,10 +78,13 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
 
     def _draw_viewport(self):
         """ Callback function from blender to draw our particles into the viewport. Don't call by yourself! """
-        bgl.glDepthMask(False)  # Need to use bgl here, since moderngl doesn't allow modifying the depth mask
-        self.glcontext.depth_func = "<="
-        self.glcontext.enable(moderngl.Context.BLEND | moderngl.Context.DEPTH_TEST |
-                              moderngl.Context.PROGRAM_POINT_SIZE)
+        # Need to use bgl here, since moderngl doesn't allow modifying the depth mask
+        bgl.glDepthMask(False)
+        # Need to use bgl here, since blender hangs, if we change state using moderngl
+        bgl.glDepthFunc(bgl.GL_LEQUAL)
+        bgl.glEnable(bgl.GL_DEPTH_TEST)
+        bgl.glEnable(bgl.GL_BLEND)
+        bgl.glEnable(bgl.GL_PROGRAM_POINT_SIZE)
         # We somehow need to recreate the vao every time, since otherwise the vertex buffers are not going to be
         # activated and some other one from blender is the active buffer.
         preview_vertex_array = self.vao_definition(self.preview_shader)
