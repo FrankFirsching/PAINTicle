@@ -14,5 +14,8 @@
         "markdown",
         "latex",
         "plaintext"
+    ],
+    "editor.rulers": [
+        120
     ]
 }
