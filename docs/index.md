@@ -8,7 +8,10 @@ installed and running. For installation instructions, please see the project's [
 ## Usage
 
 To activate the particle brush, enter texture paint mode as usual. Then run the add-on's operator
-`PAINTicle` by hitting `F3` with your mouse over a 3D view and type `PAINTicle`.
+`PAINTicle` by clicking on the menu button on the 3d-view's top menu bar.
+
+![](images//painticle_menubutton.png)
+
 This will activate the add-on on the object currently been drawn on. By drawing onto the mesh,
 Blender is not using the normal brush anymore but simulates particles' movement over the surface
 of the selected mesh. Leaving the particle paint mode can be done by hitting `ESC`.

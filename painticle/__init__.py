@@ -51,9 +51,11 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.Scene.painticle_settings = bpy.props.PointerProperty(type=settings.Settings)
+    operator.add_menu()
 
 
 def unregister():
+    operator.remove_menu()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     del bpy.types.Scene.painticle_settings

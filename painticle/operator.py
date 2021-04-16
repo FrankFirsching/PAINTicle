@@ -26,6 +26,22 @@ import time
 import painticle.particles
 
 
+def menu_draw(self, context):
+    """ A small menu button, that integrates this operator into the 3D view menu """
+    if context.mode == 'PAINT_TEXTURE':
+        self.layout.operator("view3d.painticle", icon='BRUSHES_ALL')
+
+
+# Add the menu to the 3D view
+def add_menu():
+    bpy.types.VIEW3D_MT_editor_menus.append(menu_draw)
+
+
+# Add the menu to the 3D view
+def remove_menu():
+    bpy.types.VIEW3D_MT_editor_menus.remove(menu_draw)
+
+
 # This class is the blender operator interface. It cares about mouse and pen
 # handling. The real drawing is done in a different module: particles.
 # See there for the real painting logic.
