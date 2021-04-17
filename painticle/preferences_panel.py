@@ -33,6 +33,7 @@ class PreferencesPanel(bpy.types.AddonPreferences):
     painticle: bpy.props.PointerProperty(type=preferences.Preferences)
 
     def draw(self, context):
-        row = self.layout.row()
-        row.prop(self.painticle, "preview_threshold_edge")
+        layout = self.layout.column()
+        layout.prop(self.painticle, "preview_threshold_edge")
+        layout.label(text="Version: "+utils.get_deployment_version())
         dependencies.draw_property(self, 'install_dependencies')

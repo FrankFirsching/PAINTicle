@@ -17,6 +17,7 @@
 
 # Utility classes
 
+import os
 
 class Error(Exception):
     """ Base class for errors in this module """
@@ -34,3 +35,20 @@ def matrix_to_tuple(m):
             m[0][1], m[1][1], m[2][1], m[3][1],
             m[0][2], m[1][2], m[2][2], m[3][2],
             m[0][3], m[1][3], m[2][3], m[3][3])
+
+
+# We cache the git version, so we don't need to touch everytime the preferences panel draws down to the file-system
+_cached_deployment_version = None
+
+
+def get_deployment_version():
+    global _cached_deployment_version
+    if _cached_deployment_version is None:
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        deployment_version_filename = os.path.join(script_dir, "deployment-version.txt")
+        try:
+            with open(deployment_version_filename) as f:
+                _cached_deployment_version = f.read()
+        except OSError:
+            _cached_deployment_version = "Unknown"
+    return _cached_deployment_version
