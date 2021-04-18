@@ -42,9 +42,12 @@ function cleanup {
 trap cleanup EXIT
 
 # Start the deployment logic
-rsync -av "${s}" "$WORK_DIR/" --exclude '__pycache__'
+module_name=`basename ${s}`
 
-deployment_version_file="$WORK_DIR/`basename ${s}`/deployment-version.txt"
+rsync -av "${s}" "$WORK_DIR/" --exclude '__pycache__'
+rsync -av "${s}/../LICENSE.md" "$WORK_DIR/$module_name/"
+
+deployment_version_file="$WORK_DIR/$module_name/deployment-version.txt"
 
 git describe --always --long --match 'v*' > $deployment_version_file
 
@@ -52,7 +55,7 @@ target_abs=`realpath ${t}`
 if [[ -f ${target_abs} ]]; then
   rm "${target_abs}" # Remove if zip exists, otherwise zip call would merge contents
 fi
-cd "$WORK_DIR"  && zip -9 -r ${target_abs} "`basename ${s}`"
+cd "$WORK_DIR"  && zip -9 -r ${target_abs} "$module_name"
 
 echo ""
 echo "Deployed version"
