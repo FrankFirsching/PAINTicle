@@ -30,6 +30,7 @@ bl_info = {
     "blender": (2, 92, 0),
     "version": (0, 1, 0),
     "location": "",
+    "doc_url": "https://frankfirsching.github.io/PAINTicle/",
     "warning": "",
     "category": "Paint"
 }
