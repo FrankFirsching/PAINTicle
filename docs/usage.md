@@ -1,4 +1,8 @@
-# PAINTicle - Usage
+---
+nav_order: 2
+---
+
+# Usage
 
 To activate the particle brush, enter texture paint mode as usual. Then run the add-on's operator
 `PAINTicle` by clicking on the menu button in the 3d-view's top menu bar.

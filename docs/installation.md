@@ -1,4 +1,7 @@
-# PAINTicle - Installation
+---
+nav_order: 1
+---
+# Installation
 
 To install the add-on grab a release from GitHub's [releases](https://github.com/FrankFirsching/PAINTicle/releases)
 page. The downloaded zip file can be installed via `Edit > Preferences > Add-ons > Install...`
