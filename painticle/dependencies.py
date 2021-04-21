@@ -30,16 +30,19 @@ _dependencies = None
 def install_all():
     total = len(_dependencies)
     wm = bpy.context.window_manager
-    wm.progress_begin(0, total)
+    if wm is not None:
+        wm.progress_begin(0, total)
     need_reload = False
     try:
         for i, requirement in enumerate(_dependencies):
             if not is_dependency_installed(requirement.name):
                 if _install_requirement(requirement):
                     need_reload = True
-            wm.progress_update(i)
+            if wm is not None:
+                wm.progress_update(i)
     finally:
-        wm.progress_end()
+        if wm is not None:
+            wm.progress_end()
     if need_reload:
         importlib.invalidate_caches()
 
@@ -107,8 +110,8 @@ def DependenciesProperty():
 
 
 def draw_property(panel, name):
-    panel.layout.label(text='Dependencies')
     row = panel.layout.row()
+    row.label(text='Dependencies:')
     row.prop(panel, name, toggle=1)
 
 
