@@ -18,6 +18,7 @@
 # Utilities for unit tests
 
 import os
+import subprocess
 import bpy
 import pytest
 
@@ -64,6 +65,26 @@ def has_ui():
 def no_ui():
     """ Returns true, if blender is running without UI functionality """
     return bpy.app.background
+
+
+_has_glslang_validator = None
+
+
+def has_validator():
+    """ Returns true, if the glslangValidator is supported by the system"""
+    global _has_glslang_validator
+    if _has_glslang_validator is None:
+        try:
+            devnull = open(os.devnull)
+            subprocess.run(["glslangValidator", "-h"], stdout=devnull, stderr=devnull)
+            _has_glslang_validator = True
+        except OSError:
+            _has_glslang_validator = False
+    return _has_glslang_validator
+
+
+def no_validator():
+    return not has_validator()
 
 
 def is_close(v1, v2, tolerance):

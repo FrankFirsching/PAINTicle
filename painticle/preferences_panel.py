@@ -35,5 +35,6 @@ class PreferencesPanel(bpy.types.AddonPreferences):
     def draw(self, context):
         layout = self.layout.column()
         layout.prop(self.painticle, "preview_threshold_edge")
+        layout.prop(self.painticle, "preview_mode")
         layout.label(text="Version: "+utils.get_deployment_version())
         dependencies.draw_property(self, 'install_dependencies')

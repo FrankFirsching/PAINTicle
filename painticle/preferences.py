@@ -17,6 +17,7 @@
 
 from bpy.props import IntProperty
 from bpy.types import PropertyGroup
+from bpy.props import EnumProperty
 
 
 id = __package__
@@ -39,3 +40,11 @@ class Preferences(PropertyGroup):
                                                     "back to preview mode.",
                                         default=1024, min=0, soft_min=0, soft_max=4096,
                                         options=set())
+    preview_mode: EnumProperty(items=[("particles", "Particles",
+                                       "Show just the particles", 1),
+                                      ("texture_overlay", "Texture overlay",
+                                       "Draw the highres texture with an overlay style", 2)],
+                               name="Preview mode",
+                               description="If the system needs to fallback to preview mode, how should be drawn.",
+                               default="particles",
+                               options=set())

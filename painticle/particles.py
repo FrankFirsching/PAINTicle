@@ -28,7 +28,6 @@ import random
 from . import physics
 from . import trianglemesh
 from .utils import Error
-from . import particle_painter_gpu
 
 from . import particle
 
@@ -36,6 +35,7 @@ from . import particle
 class Particles:
     """ A class managing the particle system for the paint operator """
     def __init__(self, context: bpy.types.Context):
+        from . import particle_painter_gpu
         self.rnd = random.Random()
         self.paint_mesh = trianglemesh.TriangleMesh(context.active_object)
         self.matrix = self.paint_mesh.object.matrix_world.copy()

@@ -33,7 +33,7 @@ import tstutils
 
 
 def test_shader_loading():
-    source = gpu_utils.load_shader_source("particle2d", "frag")
+    source = gpu_utils.load_shader_file("particle2d", "frag")
     assert source is not None
     assert source.startswith("// This file is part of PAINTicle.")
 
@@ -44,7 +44,7 @@ def test_draw_offscreen():
     height = 1024
     glcontext = moderngl.create_context()
     framebuffer = gpu_utils.gpu_simple_framebuffer((width, height), glcontext)
-    shader = gpu_utils.load_shader("particle2d", glcontext, ["particle"])
+    shader = gpu_utils.load_shader("particle2d", glcontext, ["utils", "particle"])
     assert shader is not None
     shader["image_size"] = (width, height)
     shader["particle_size_age_factor"] = 2
@@ -63,7 +63,7 @@ def test_draw_offscreen():
     num_floats = len(coords)
     vbo_data = struct.pack(f"{num_floats}f", *coords)
     vbo = glcontext.buffer(vbo_data)
-    vao = glcontext.vertex_array(shader, vbo, "p.uv", "p.size", "p.age", "p.max_age", "p.color")
+    vao = glcontext.vertex_array(shader, vbo, "uv", "size", "age", "max_age", "color")
     scope = glcontext.scope(framebuffer=framebuffer)
     with scope:
         glcontext.clear(0, 0, 0, 0)
@@ -71,3 +71,18 @@ def test_draw_offscreen():
 
     pixels = gpu_utils.read_pixel_data_from_framebuffer(width, height, framebuffer)
     gpu_utils.save_pixels("./debug.png", pixels, width, height)
+
+
+@pytest.mark.skipif(tstutils.no_validator(), reason="requires GLSL validator")
+def test_glsl_validation_particle2d():
+    vert, frag, geom = gpu_utils.load_shader_source("particle2d", ["utils", "particle"])
+    assert gpu_utils.validate_glsl_shaders(vert, "vert")
+    assert gpu_utils.validate_glsl_shaders(frag, "frag")
+    assert gpu_utils.validate_glsl_shaders(geom, "geom")
+
+@pytest.mark.skipif(tstutils.no_validator(), reason="requires GLSL validator")
+def test_glsl_validation_particle3d():
+    vert, frag, geom = gpu_utils.load_shader_source("particle3d", ["utils", "particle"])
+    assert gpu_utils.validate_glsl_shaders(vert, "vert")
+    assert gpu_utils.validate_glsl_shaders(frag, "frag")
+    assert gpu_utils.validate_glsl_shaders(geom, "geom")

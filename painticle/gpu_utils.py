@@ -21,6 +21,7 @@ import bpy
 import os
 import numpy as np
 import typing
+import subprocess
 
 from . import dependencies
 
@@ -54,7 +55,7 @@ def gpu_simple_framebuffer(size, glcontext: moderngl.Context) -> moderngl.Frameb
     return glcontext.framebuffer(color_attachment)
 
 
-def load_shader_source(shader_name: str, stage: str) -> str:
+def load_shader_file(shader_name: str, stage: str) -> str:
     """ Loads the shader source from the addon's resources directory. Possible stages are
         * 'vert' = vertex shader
         * 'geom' = geometry shader
@@ -71,7 +72,7 @@ def load_shader_source(shader_name: str, stage: str) -> str:
 
 
 def _join_shader(definitions_shader, specific_shader, prepend_version=True):
-    version = "#version 330\n" if prepend_version else ""
+    version = "#version 430\n" if prepend_version else ""
     if prepend_version and specific_shader is None:
         # On the last stage of concatenation, if specific shader is None, then also return None
         return None
@@ -80,21 +81,28 @@ def _join_shader(definitions_shader, specific_shader, prepend_version=True):
     return version + use_definition + use_specific
 
 
-def load_shader(shader_name, glcontext: moderngl.Context,
-                additional_libs: typing.Iterable[str] = None) -> moderngl.Program:
-    """ Load all shaders for a given shader name """
-    vertex_shader = load_shader_source(shader_name, "vert")
-    geometry_shader = load_shader_source(shader_name, "geom")
-    fragment_shader = load_shader_source(shader_name, "frag")
-    definitions_shader = load_shader_source(shader_name, "def")
+def load_shader_source(shader_name, additional_libs: typing.Iterable[str] = None) -> typing.Tuple:
+    """ Load all shaders for a given shader name and return a triple with the preprocessed sources """
+    vertex_shader = load_shader_file(shader_name, "vert")
+    geometry_shader = load_shader_file(shader_name, "geom")
+    fragment_shader = load_shader_file(shader_name, "frag")
+    definitions_shader = load_shader_file(shader_name, "def")
     if additional_libs is not None:
         for lib in reversed(additional_libs):
-            definitions_shader = _join_shader(load_shader_source(lib, "def"), definitions_shader, False)
+            definitions_shader = _join_shader(load_shader_file(lib, "def"), definitions_shader, False)
+    vertex_shader = _join_shader(definitions_shader, vertex_shader)
+    fragment_shader = _join_shader(definitions_shader, fragment_shader)
+    geometry_shader = _join_shader(definitions_shader, geometry_shader)
+    return vertex_shader, fragment_shader, geometry_shader
 
-    program = glcontext.program(vertex_shader=_join_shader(definitions_shader, vertex_shader),
-                                fragment_shader=_join_shader(definitions_shader, fragment_shader),
-                                geometry_shader=_join_shader(definitions_shader, geometry_shader),
-                                )
+
+def load_shader(shader_name, glcontext: moderngl.Context,
+                additional_libs: typing.Iterable[str] = None) -> moderngl.Program:
+    """ Load all shaders for a given shader name and return a compiled shader program """
+    vertex_shader, fragment_shader, geometry_shader = load_shader_source(shader_name, additional_libs)
+    program = glcontext.program(vertex_shader=vertex_shader,
+                                fragment_shader=fragment_shader,
+                                geometry_shader=geometry_shader)
     return program
 
 
@@ -126,3 +134,20 @@ def print_shader_members(shader: moderngl.Program):
     for name in shader:
         member = shader[name]
         print(name, type(member), member)
+
+
+def validate_glsl_shaders(full_shader_source, stage):
+    """ A utility, that validates a glsl shader source through the Khronos reference validator.
+        The validator needs to be installed on the system and callable without specifying the installatio path """
+    if full_shader_source is None:
+        # A non existent shader is valid (e.g. geometry stage)
+        return True
+    proc = subprocess.run(['glslangValidator', '--stdin', '-S', stage], input=full_shader_source, text=True,
+                          capture_output=True)
+    if proc.returncode != 0:
+        print("\n".join([str(i+1)+": "+x for i, x in enumerate(full_shader_source.split('\n'))]))
+        output = proc.stdout
+        if output.startswith("stdin"):
+            output = output[5:]
+        print(output)
+    return proc.returncode == 0

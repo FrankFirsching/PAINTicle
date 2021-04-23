@@ -14,22 +14,17 @@
 // along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
 
-// Texturize the blown-up particle quad with a soft falloff
+// Draw the internal texture onto the object for preview
 
-in vec2 center;
-in Particle p_frag;
+in vec2 texture_uv;
 
-out vec4 frag_color;
+out vec4 fragColor;
 
-uniform vec2 image_size;
-
+uniform sampler2D image;
 
 void main()
 {
-  vec2 offset = 2*gl_PointCoord.xy - vec2(1);
-  // Set the particles's color (drawing to viewport, which is linear color space)
-  frag_color = vec4(srgb_to_linear(p_frag.color), particle_alpha(p_frag, offset));
-  // Discard everything outside of the circular point shape
-  if(frag_color.a<0)
-    discard;
+  fragColor = texture(image, texture_uv);
+  fragColor.rgb = srgb_to_linear(fragColor.rgb);
+  fragColor.a = 0.5;
 }

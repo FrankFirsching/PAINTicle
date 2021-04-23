@@ -15,14 +15,20 @@
 
 // Definitions shader
 
+#define EMPTY
+#define PARTICLE_FIELDS(x) \
+    x vec3 location; \
+    x vec2 uv; \
+    x float size; \
+    x float age; \
+    x float max_age; \
+    x vec3 color; \
+
+#define CONSTRUCT_PARTICLE_ARGS location, uv, size, age, max_age, color
+
 struct Particle
 {
-    vec3 location;
-    vec2 uv;
-    float size;
-    float age;
-    float max_age;
-    vec3 color;
+    PARTICLE_FIELDS(EMPTY)
 };
 
 float particle_alpha(in Particle p, in vec2 offset)

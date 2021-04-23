@@ -59,5 +59,11 @@ class ParticlePainter(ABC):
         paint_images = self.context.object.active_material.texture_paint_images
         return paint_images[image_slot] if image_slot < len(paint_images) else None
 
+    def get_active_mesh(self):
+        """ Get the mesh, we're currently painting on """
+        active_object = self.context.object
+        return active_object.data if active_object is not None else None
+
     def get_particle_settings(self):
+        """ Get PAINTicle's settings from the scene """
         return self.context.scene.painticle_settings
