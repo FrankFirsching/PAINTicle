@@ -13,6 +13,20 @@ button will be clickable gray and it can trigger the installation of the depende
 
 ![](images/painticle_preferences.png)
 
+# Preview mode selection
+
+The add-on supports multiple ways to improve performance and reduce the rendering quality during painting. Since
+updating the texture in blender's image management system is quite costly, starting from a configurable texture size
+threshold (predefined to 1 megapixel = 1024 pixels edge length), the add-on won't update blender's texture on each
+simulation step.
+
+![](images/painticle_previewmode.jpg)
+
+| Mode | Description |
+| - | - |
+| *Particles* | Drawing the simulated particles as dots. |
+| *Texture overlay* | Overlaying the calculated texture on top of the viewport.<br>This doesn't keep the shading of the material but shows the texture content directly. |
+
 ## Requirements
 
 The add-on requires a GPU capable of OpenGL 4.3, which provides support for compute shaders. This is a higher level

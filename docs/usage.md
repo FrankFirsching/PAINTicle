@@ -11,7 +11,12 @@ To activate the particle brush, enter texture paint mode as usual. Then run the 
 
 This will activate the add-on on the object currently been drawn on. By drawing onto the mesh,
 Blender is not using the normal brush anymore but simulates particles' movement over the surface
-of the selected mesh. Leaving the particle paint mode can be done by hitting `ESC`.
+of the selected mesh. Leaving the particle paint mode can be done by hitting `ESC`. When activated, you can see in the
+lower left corner of the viewport the status of the add-on. While waiting for the next stroke being drawn it reads
+`PAINTicle active`, but while the simulation is running it shows `Simulating...`. This indicates, that there are
+still particles in the scene, influencing the painted texture. When using the preview mode, it's important to wait until
+the end of the simulation before exiting the tool, otherwise, the last stroke is not being  synchronized to blender's
+version of the image anymore and gets lost.
 
  The *Tools* panel offers a group with settings for the particle brush:
 
