@@ -26,7 +26,6 @@ from . import preferences
 from .utils import Error
 
 import bpy
-import gpu
 import mathutils
 import bgl
 import numpy as np
@@ -57,6 +56,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
     """ This particle painter is using the GPU to draw the particles. """
 
     draw_handler = None
+    draw_handler_text = None
 
     def __init__(self, context: bpy.types.Context):
         super().__init__(context)
@@ -86,11 +86,19 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         # A hack for the update problem
         self.roll_factor = 1
         self.use_preview = False
+        if ParticlePainterGPU.draw_handler_text is None:
+            self.context.area.tag_redraw()
+            ParticlePainterGPU.draw_handler_text = \
+                bpy.types.SpaceView3D.draw_handler_add(ParticlePainterGPU._draw_viewport_text,
+                                                       (self,), "WINDOW", "POST_PIXEL")
         self.update_paintbuffer()
 
     def shutdown(self):
         self.write_blender_image()
         self.set_use_preview(False)
+        if ParticlePainterGPU.draw_handler_text is not None:
+            bpy.types.SpaceView3D.draw_handler_remove(ParticlePainterGPU.draw_handler_text, "WINDOW")
+            ParticlePainterGPU.draw_handler_text = None
 
     def set_use_preview(self, onOff):
         if self.use_preview == onOff:
@@ -105,6 +113,8 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
 
     def _draw_viewport(self):
         """ Callback function from blender to draw our particles into the viewport. Don't call by yourself! """
+        if not self.is_sim_active():
+            return
         self.update_preview_uniforms()
         # Need to use bgl here, since blender hangs, if we change state using moderngl
         bgl.glDepthFunc(bgl.GL_LEQUAL)
@@ -122,6 +132,17 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             self.mesh_buffers.draw()
         else:
             raise Error("Unknown preview_mode!")
+
+    def _draw_viewport_text(self):
+        """ Callback function from blender to draw UI elements """
+        if self.is_sim_active():
+            gpu_utils.draw_text(self.context, 10, 10, 24, "Simulating...", (1, 0.5, 0.5, 0.5))
+        else:
+            gpu_utils.draw_text(self.context, 10, 10, 24, "PAINTicle active", (0, 0, 0, 0.5))
+
+    def is_sim_active(self):
+        """ A simulation is active, if the next draw call is not starting a new sim """
+        return not self.from_new_sim
 
     def draw(self, particles, time_step):
         """ Draw the given particles into the paint buffer and sync to blender's image in case we're not in

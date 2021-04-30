@@ -18,6 +18,8 @@
 # <pep8 compliant>
 
 import bpy
+import blf
+
 import os
 import numpy as np
 import typing
@@ -151,3 +153,12 @@ def validate_glsl_shaders(full_shader_source, stage):
             output = output[5:]
         print(output)
     return proc.returncode == 0
+
+
+def draw_text(context, pos_x, pos_y, size, text, color):
+    """ Draw some text at given position """
+    font_id = 0
+    blf.position(font_id, pos_x, pos_y, 0)
+    blf.size(font_id, size, context.preferences.system.dpi)
+    blf.color(font_id, color[0], color[1], color[2], color[3])
+    blf.draw(font_id, text)
