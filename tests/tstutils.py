@@ -44,7 +44,9 @@ def open_file(filename):
 
 
 class FakeContext(object):
-    pass
+    def setup_screen_and_area(self):
+        self.screen = bpy.data.screens['Layout']
+        self.area = [x for x in self.screen.areas if x.type == "VIEW_3D"][0]
 
 
 def get_default_context():
@@ -54,6 +56,8 @@ def get_default_context():
     fake_context.object = bpy.context.scene.view_layers[0].objects.active
     for x in dir(bpy.context):
         setattr(fake_context, x, getattr(bpy.context, x))
+    # Find a 3D view area to mimic the real usage, where the user triggers the addon by clicking a button in the 3D view
+    fake_context.setup_screen_and_area()
     return fake_context
 
 

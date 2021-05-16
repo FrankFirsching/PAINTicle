@@ -36,5 +36,6 @@ class PreferencesPanel(bpy.types.AddonPreferences):
         layout = self.layout.column()
         layout.prop(self.painticle, "preview_threshold_edge")
         layout.prop(self.painticle, "preview_mode")
+        layout.prop(self.painticle, "overlay_preview_opacity")
         layout.label(text="Version: "+utils.get_deployment_version())
         dependencies.draw_property(self, 'install_dependencies')

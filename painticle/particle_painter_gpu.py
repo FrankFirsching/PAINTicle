@@ -65,6 +65,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.preview_threshold = preferences.get_instance(context).preview_threshold_edge
         self.preview_threshold *= self.preview_threshold
         self.preview_mode = preferences.get_instance(context).preview_mode
+        self.overlay_preview_opacity = preferences.get_instance(context).overlay_preview_opacity
         # Setup common GL stuff
         self.glcontext = moderngl.create_context()
         self.paintbuffer = None
@@ -263,7 +264,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         if self.preview_mode == "particles":
             self.preview_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
         elif self.preview_mode == "texture_overlay":
-            pass
+            self.preview_shader["opacity"] = self.overlay_preview_opacity
         else:
             raise Error("Unknown preview_mode!")
 

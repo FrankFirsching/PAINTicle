@@ -20,11 +20,12 @@ in vec2 texture_uv;
 
 out vec4 fragColor;
 
+uniform float opacity;
 uniform sampler2D image;
 
 void main()
 {
   fragColor = texture(image, texture_uv);
   fragColor.rgb = srgb_to_linear(fragColor.rgb);
-  fragColor.a = 0.5;
+  fragColor.a = opacity;
 }

@@ -15,7 +15,7 @@
 
 # <pep8 compliant>
 
-from bpy.props import IntProperty
+from bpy.props import FloatProperty, IntProperty
 from bpy.types import PropertyGroup
 from bpy.props import EnumProperty
 
@@ -48,3 +48,7 @@ class Preferences(PropertyGroup):
                                description="If the system needs to fallback to preview mode, how should be drawn.",
                                default="particles",
                                options=set())
+    overlay_preview_opacity: FloatProperty(name="Overlay Preview Opacity",
+                                           description="Opacity of the overlay, if preview mode is set to this.",
+                                           default=0.5, min=0, max=1,
+                                           options=set())
