@@ -34,12 +34,12 @@ void main()
     p_frag = particle;
     center = particle.uv * image_size;
 
-    float size = particle_size(particle, particle_size_age_factor);
+    p_frag.size = particle_size(particle, particle_size_age_factor);
     
 
     float aspect = image_size[0] / image_size[1];
-    float size_x = size * aspect;
-    float size_y = size * aspect;
+    float size_x = p_frag.size * aspect;
+    float size_y = p_frag.size * aspect;
 
     gl_Position = pos + vec4(-size_x, -size_y, 0, 0);
     EmitVertex();

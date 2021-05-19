@@ -23,5 +23,7 @@ out vec2 texture_uv;
 void main()
 {
   gl_Position = model_view_projection * vec4(vertex, 1.0);
+  // Add a little polygon offset, since we draw the overlay directly over the original mesh
+  gl_Position.z -= 0.000001;
   texture_uv = uv;
 }

@@ -49,19 +49,23 @@ class ParticlePainter(ABC):
         """ Get the active brush """
         return self.context.tool_settings.image_paint.brush
 
+    def get_active_object(self):
+        """ Get the mesh, we're currently painting on """
+        return self.context.object
+
     def get_active_image_slot(self):
         """ Return the active image slot for detecting changes in the painted image """
-        return self.context.object.active_material.paint_active_slot
+        return self.get_active_object().active_material.paint_active_slot
 
     def get_active_image(self):
         """ Get the texture we're painting to """
         image_slot = self.get_active_image_slot()
-        paint_images = self.context.object.active_material.texture_paint_images
+        paint_images = self.get_active_object().active_material.texture_paint_images
         return paint_images[image_slot] if image_slot < len(paint_images) else None
 
     def get_active_mesh(self):
         """ Get the mesh, we're currently painting on """
-        active_object = self.context.object
+        active_object = self.get_active_object()
         return active_object.data if active_object is not None else None
 
     def get_particle_settings(self):

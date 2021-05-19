@@ -259,7 +259,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.paint_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
 
     def update_preview_uniforms(self):
-        model_view_projection = self.context.region_data.perspective_matrix
+        model_view_projection = self.context.region_data.perspective_matrix @ self.get_active_object().matrix_world
         self.preview_shader["model_view_projection"] = utils.matrix_to_tuple(model_view_projection)
         if self.preview_mode == "particles":
             self.preview_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
