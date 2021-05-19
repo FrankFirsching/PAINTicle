@@ -43,11 +43,13 @@ def test_particle(test_mesh):
     z_axis = mathutils.Vector((0, 0, 1))
 
     assert test_mesh is not None
-    paint_mesh = trianglemesh.TriangleMesh(test_mesh)
+    context = tstutils.get_default_context(test_mesh)
+    paint_mesh = trianglemesh.TriangleMesh(context)
 
     p = particle.Particle(loc, tri_index, color, paint_mesh, particle_settings)
     assert p
-    assert p.location == loc
+    min_tol = 0.000001
+    assert tstutils.is_close_vec(p.location, loc, min_tol)
     assert p.tri_index == tri_index
     assert p.acceleration == null_vec3
     assert p.speed == null_vec3
@@ -59,7 +61,6 @@ def test_particle(test_mesh):
     assert p.age == 0
     assert tstutils.is_close(p.max_age, particle_settings.max_age, particle_settings.max_age_random)
     # color randomness is by default 0, so we need a certain epsilon as the tolerance
-    min_tol = 0.000001
     assert tstutils.is_close(p.color.h, color.h, max(particle_settings.color_random.h, min_tol))
     assert tstutils.is_close(p.color.s, color.s, max(particle_settings.color_random.s, min_tol))
     assert tstutils.is_close(p.color.v, color.v, max(particle_settings.color_random.v, min_tol))

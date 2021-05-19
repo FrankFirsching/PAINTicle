@@ -48,8 +48,13 @@ class FakeContext(object):
         self.screen = bpy.data.screens['Layout']
         self.area = [x for x in self.screen.areas if x.type == "VIEW_3D"][0]
 
+    def setup_active_object(self, active_object):
+        if active_object is not None:
+            self.object = active_object
+            self.active_object = active_object
 
-def get_default_context():
+
+def get_default_context(active_object=None):
     fake_context = FakeContext()
     # In some situations, the bpy.context.object is not accessible during the unit tests.
     # We fake it by using the active one from the first view layer.
@@ -58,6 +63,7 @@ def get_default_context():
         setattr(fake_context, x, getattr(bpy.context, x))
     # Find a 3D view area to mimic the real usage, where the user triggers the addon by clicking a button in the 3D view
     fake_context.setup_screen_and_area()
+    fake_context.setup_active_object(active_object)
     return fake_context
 
 
@@ -93,3 +99,6 @@ def no_validator():
 
 def is_close(v1, v2, tolerance):
     return (v1 >= v2 - tolerance) and (v1 <= v2 + tolerance)
+
+def is_close_vec(v1, v2, tolerance):
+    return all(is_close(x,y, tolerance) for x,y in zip(v1,v2))

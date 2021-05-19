@@ -15,8 +15,7 @@
 
 # <pep8 compliant>
 
-# A mesh helper class, that allows easy acccess to triangles of polys and to
-# neighbors of a triangle
+# A mesh helper class, that allows easy acccess to triangles of polys
 
 import bpy
 import mathutils
@@ -26,20 +25,20 @@ from painticle.utils import Error
 
 
 class TriangleMesh:
-    """ A class providing additional mesh operations as blende does. It supports e.g. neighbor information to
-        walk around on the mesh. """
+    """ A class providing additional mesh operations as blende does. It supports e.g. efficient finding of the triangle
+        if only a point and polygon id is being given. """
 
-    def __init__(self, object):
-        self.object = object
-        mesh = object.data
+    def __init__(self, context):
+        self.object = context.object
+        mesh = self.object.data
         if (not mesh.polygons):
             raise Error("ERROR: Mesh doesn't have polygons")
         self.mesh = mesh
         self.mesh.calc_normals_split()
         self.mesh.calc_loop_triangles()
         self.build_poly_maps()
-        self.build_back_refs()
-        self.build_neighbor_infos()
+        depsgraph = context.evaluated_depsgraph_get()
+        self.bvh = mathutils.bvhtree.BVHTree.FromObject(self.object, depsgraph)
 
     def triangle_for_point_on_poly(self, p, face_index):
         eps = 0.0
@@ -59,47 +58,10 @@ class TriangleMesh:
                      b0=mathutils.Vector((1, 0, 0)),
                      b1=mathutils.Vector((0, 1, 0)),
                      b2=mathutils.Vector((0, 0, 1))):
-        tri = self.mesh.loop_triangles[tri_index]
-        tri_p = [self.mesh.vertices[i].co for i in tri.vertices]
-        return mathutils.geometry.barycentric_transform(p, tri_p[0], tri_p[1], tri_p[2], b0, b1, b2)
-
-    def project_point_to_triangle(self, p, tri_index):
-        tri = self.mesh.loop_triangles[tri_index]
-        tri_p = [self.mesh.vertices[i].co for i in tri.vertices]
-        n = tri.normal
-        v = tri_p[0]-p
-        offset = v.project(n)
-        p_new = p+offset
-        return p_new
-
-    def move_over_triangle_boundaries(self, old_p, p, tri_index):
-        # we should wrap the distance old_p -> p onto the mesh and not just
-        # project p onto the next triangle
-        baries = self.barycentrics(p, tri_index)
-        visited_triangles = set()
-        while not all(bary >= 0 for bary in baries) and tri_index not in visited_triangles:
-            visited_triangles.add(tri_index)
-            neighbors = self.neighbors[tri_index]
-            if baries[0] < 0:
-                if neighbors[1] is not None:
-                    tri_index = neighbors[1]//3
-                else:
-                    return p, tri_index, False
-            elif baries[1] < 0:
-                if neighbors[2] is not None:
-                    tri_index = neighbors[2]//3
-                else:
-                    return p, tri_index, False
-            elif baries[2] < 0:
-                if neighbors[0] is not None:
-                    tri_index = neighbors[0]//3
-                else:
-                    return p, tri_index, False
-            else:
-                raise Error("ERROR: Barycentrics invalid.")
-            p = self.project_point_to_triangle(p, tri_index)
-            baries = self.barycentrics(p, tri_index)
-        return p, tri_index, True
+        tri = self.mesh.loop_triangles[tri_index].vertices
+        verts = self.mesh.vertices
+        return mathutils.geometry.barycentric_transform(p, verts[tri[0]].co, verts[tri[1]].co, verts[tri[2]].co,
+                                                        b0, b1, b2)
 
     def build_poly_maps(self):
         """ Builds 2 maps, that allow mapping from triangles to polygons and
@@ -112,34 +74,6 @@ class TriangleMesh:
                 self.poly_to_tri[tri.polygon_index].append(tri.index)
             else:
                 self.poly_to_tri[tri.polygon_index] = [tri.index]
-
-    def build_back_refs(self):
-        """ Builds map, that allows to query all outgoing edges of a vertex """
-        self.back_refs = [None]*len(self.mesh.vertices)
-        for tri in self.mesh.loop_triangles:
-            for i in range(3):
-                v = tri.vertices[i]
-                if self.back_refs[v] is not None:
-                    self.back_refs[v].append(tri.index*3+i)
-                else:
-                    self.back_refs[v] = [tri.index*3+i]
-
-    def build_neighbor_infos(self):
-        """ Builds map, that specifies the neighbor edges of a triangle edge """
-        self.neighbors = [None]*len(self.mesh.loop_triangles)
-        for tri in self.mesh.loop_triangles:
-            neighbors = [None]*3
-            for i in range(3):
-                v = tri.vertices[i]
-                vNext = tri.vertices[(i+1) % 3]
-                possibleNeighbors = self.back_refs[vNext]
-                neighboringEdge = None
-                for e in possibleNeighbors:
-                    if self.edgeEnd(e) == v:
-                        neighboringEdge = e
-                        break
-                neighbors[i] = neighboringEdge
-            self.neighbors[tri.index] = neighbors
 
     def edgeStart(self, edgeId):
         return self.mesh.loop_triangles[edgeId//3].vertices[edgeId % 3]

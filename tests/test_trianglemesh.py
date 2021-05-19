@@ -28,7 +28,8 @@ import tstutils
 
 def get_triangle_mesh(blend_object_name):
     blendobject = bpy.data.objects[blend_object_name]
-    return trianglemesh.TriangleMesh(blendobject)
+    context = tstutils.get_default_context(blendobject)
+    return trianglemesh.TriangleMesh(context)
 
 
 @pytest.fixture
@@ -81,50 +82,6 @@ def test_triangle_for_point_on_poly(test_cube, test_plane):
     assert test_plane.triangle_for_point_on_poly(p, 0) == 1
     p = mathutils.Vector((0.7, 0.2, 0))
     assert test_plane.triangle_for_point_on_poly(p, 0) == 0
-
-
-def test_project_point_to_triangle(test_cube):
-    p = mathutils.Vector((0.2, 0.7, 1.4))
-    p_proj = test_cube.project_point_to_triangle(p, 0)
-    assert p_proj == mathutils.Vector((0.2, 0.7, 1))
-
-
-def test_move_over_triangle_boundaries(test_plane):
-    # Inside move 1
-    p0 = mathutils.Vector((0.7, 0.2, 0))
-    p1 = mathutils.Vector((0.2, 0.7, 0.1))
-    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
-    assert was_moved is True
-    assert tri_new == 1
-    assert p_new == mathutils.Vector((0.2, 0.7, 0))
-    # Inside move 2
-    p0 = mathutils.Vector((0.2, 0.7, 0))
-    p1 = mathutils.Vector((0.7, 0.2, 0.1))
-    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 1)
-    assert was_moved is True
-    assert tri_new == 0
-    assert p_new == mathutils.Vector((0.7, 0.2, 0))
-    # Boundary move 1
-    p0 = mathutils.Vector((0.7, 0.2, 0))
-    p1 = mathutils.Vector((1.2, 0.2, 0))
-    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
-    assert was_moved is False
-    assert tri_new == 0
-    assert p_new == p1
-    # Boundary move 2
-    p0 = mathutils.Vector((0.7, 0.2, 0))
-    p1 = mathutils.Vector((0.7, -1.2, 0))
-    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
-    assert was_moved is False
-    assert tri_new == 0
-    assert p_new == p1
-    # Edge move
-    p0 = mathutils.Vector((1.0, 0.2, 0))
-    p1 = mathutils.Vector((1.0, 0.7, 0))
-    p_new, tri_new, was_moved = test_plane.move_over_triangle_boundaries(p0, p1, 0)
-    assert was_moved is True
-    assert tri_new == 0
-    assert p_new == mathutils.Vector((1.0, 0.7, 0))
 
 
 def test_mappings(test_cube):

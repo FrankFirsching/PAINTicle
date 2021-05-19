@@ -37,7 +37,7 @@ class Particles:
     def __init__(self, context: bpy.types.Context):
         from . import particle_painter_gpu
         self.rnd = random.Random()
-        self.paint_mesh = trianglemesh.TriangleMesh(context.active_object)
+        self.paint_mesh = trianglemesh.TriangleMesh(context)
         self.matrix = self.paint_mesh.object.matrix_world.copy()
         self.particles = []
         self.painter = particle_painter_gpu.ParticlePainterGPU(context)

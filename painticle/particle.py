@@ -85,41 +85,21 @@ class Particle:
 
     def update_location_dependent_properties(self, paint_mesh):
         self.project_back_to_triangle(paint_mesh)
-        self.barycentric = paint_mesh.barycentrics(self.location, self.tri_index)
+        bary = paint_mesh.barycentrics(self.location, self.tri_index)
+        self.barycentric = bary
 
-        mesh = paint_mesh.mesh
-        tri = mesh.loop_triangles[self.tri_index]
-        n = [mathutils.Vector(n) for n in tri.split_normals]
-
-        uvMap = mesh.uv_layers.active
-        uv = [uvMap.data[i].uv.copy() for i in tri.loops]
-
-        if all(coord > 0 for coord in self.barycentric):
+        if bary[0] > 0 and bary[1] > 0 and bary[2] > 0:
             # If we're within the triangle...
-            uv[0].resize_3d()
-            uv[1].resize_3d()
-            uv[2].resize_3d()
-            uvx = paint_mesh.barycentrics(self.location, self.tri_index,
-                                          uv[0], uv[1], uv[2])
-            self.uv = uvx.resized(2)
-            self.normal = paint_mesh.barycentrics(self.location, self.tri_index,
-                                                  n[0], n[1], n[2])
-            self.normal.normalize()
+            mesh = paint_mesh.mesh
+            tri = mesh.loop_triangles[self.tri_index]
+            uvMap = mesh.uv_layers.active.data
+            # Fully unrolled uv interpolation, due to performance reasons
+            self.uv = uvMap[tri.loops[0]].uv*bary[0] + uvMap[tri.loops[1]].uv*bary[1] + uvMap[tri.loops[2]].uv*bary[2]
 
     def project_back_to_triangle(self, paint_mesh):
         # Put the particle back to the triangle surface
-        if True:  # Use triangle neighbor info movement
-            new_location = \
-                paint_mesh.project_point_to_triangle(self.location, self.tri_index)
-            new_location, new_tri_index, was_moved = \
-                paint_mesh.move_over_triangle_boundaries(self.location, new_location, self.tri_index)
-            if not was_moved:
-                # If particle moved over boundary, let it die
-                self.age = self.max_age+1
-            self.location = new_location
-            self.tri_index = new_tri_index
-        else:
-            result, location, normal, index = paint_mesh.object.closest_point_on_mesh(self.location)
-            if result:
-                self.location = location
-                self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
+        location, normal, index, distance = paint_mesh.bvh.find_nearest(self.location)
+        if location is not None:
+            self.location = location
+            self.normal = normal
+            self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
