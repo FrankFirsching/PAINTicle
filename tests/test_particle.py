@@ -53,7 +53,7 @@ def test_particle(test_mesh):
     assert p.tri_index == tri_index
     assert p.acceleration == null_vec3
     assert p.speed == null_vec3
-    assert p.barycentric == mathutils.Vector((0.6, 0.25, 0.15))
+    assert tstutils.is_close_vec(p.barycentric, mathutils.Vector((0.6, 0.25, 0.15)), min_tol)
     assert p.normal == z_axis
     assert p.uv == mathutils.Vector((0.725, 0.5375))
     assert tstutils.is_close(p.particle_size, particle_settings.particle_size, particle_settings.particle_size_random)

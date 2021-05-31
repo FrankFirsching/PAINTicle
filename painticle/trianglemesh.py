@@ -17,11 +17,12 @@
 
 # A mesh helper class, that allows easy acccess to triangles of polys
 
-import bpy
 import mathutils
-import sys
 
-from painticle.utils import Error
+import numpy as np
+
+from .utils import Error
+from . import bvh
 
 
 class TriangleMesh:
@@ -37,8 +38,17 @@ class TriangleMesh:
         self.mesh.calc_normals_split()
         self.mesh.calc_loop_triangles()
         self.build_poly_maps()
-        depsgraph = context.evaluated_depsgraph_get()
-        self.bvh = mathutils.bvhtree.BVHTree.FromObject(self.object, depsgraph)
+        self.build_bvh(context)
+
+
+    def build_bvh(self, context):
+        points = np.empty((len(self.mesh.vertices), 3), dtype=np.single)
+        self.mesh.vertices.foreach_get("co", np.reshape(points, len(self.mesh.vertices)*3))
+        triangles = np.empty(len(self.mesh.loop_triangles)*3, dtype=np.uintc)
+        self.mesh.loop_triangles.foreach_get("vertices", triangles)
+        normals = np.empty(len(self.mesh.loop_triangles)*9, dtype=np.single)
+        self.mesh.loop_triangles.foreach_get("split_normals", normals)
+        self.bvh = bvh.build_bvh(points, triangles, normals)
 
     def triangle_for_point_on_poly(self, p, face_index):
         eps = 0.0

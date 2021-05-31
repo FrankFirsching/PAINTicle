@@ -34,17 +34,22 @@ from . import particle
 
 class Particles:
     """ A class managing the particle system for the paint operator """
-    def __init__(self, context: bpy.types.Context):
+    def __init__(self, context: bpy.types.Context, omit_painter=False):
+        """ If omit_painter is True, paint_particles and undo_last_paint may not be called. """
         from . import particle_painter_gpu
         self.rnd = random.Random()
         self.paint_mesh = trianglemesh.TriangleMesh(context)
         self.matrix = self.paint_mesh.object.matrix_world.copy()
         self.particles = []
-        self.painter = particle_painter_gpu.ParticlePainterGPU(context)
+        if omit_painter:
+            self.painter = None
+        else:
+            self.painter = particle_painter_gpu.ParticlePainterGPU(context)        
         self.last_shoot_time = 0
 
     def __del__(self):
-        self.painter.shutdown()
+        if self.painter is not None:
+            self.painter.shutdown()
 
     def numParticles(self):
         """ Return the number of simulated particles """

@@ -298,7 +298,11 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
 
         # not working: self.context.area.tag_redraw()
         self.roll_factor = -1 if self.roll_factor > 0 else 1
-        bpy.ops.view3d.view_roll(angle=0.000005*self.roll_factor)
+        override = {
+            'area': self.context.area,
+            'region': self.context.region,
+        }
+        bpy.ops.view3d.view_roll(override, angle=0.000005*self.roll_factor)
 
     def build_mesh_vbo(self, mesh: bpy.types.Mesh):
         if self.mesh_buffers is None:

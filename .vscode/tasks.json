@@ -1,0 +1,65 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "${config:python.pythonPath}",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "args": [
+                "setup.py",
+                "build",
+                "--build-lib=build/out/"
+            ],
+            "presentation": {
+                "echo": true,
+                "panel": "shared"
+            },
+            "linux": {
+                "problemMatcher": [
+                    "$gcc"
+                ]
+            }
+        },
+        {
+            "label": "build debug",
+            "command": "${config:python.pythonPath}",
+            "group": "build",
+            "args": [
+                "setup.py",
+                "build",
+                "--build-lib=build/out/",
+                "--debug"
+            ],
+            "presentation": {
+                "echo": true,
+                "panel": "shared"
+            },
+            "linux": {
+                "problemMatcher": [
+                    "$gcc"
+                ]
+            }
+        },
+        {
+            "label": "clean",
+            "command": "${config:python.pythonPath}",
+            "group": "build",
+            "args": [
+                "setup.py",
+                "clean",
+                "-a",
+                "--build-lib=build/out/"
+            ],
+            "presentation": {
+                "echo": true,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

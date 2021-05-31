@@ -1,5 +1,5 @@
 __pycache__
-build
 *.pdb
 *.blend1
 PAINTicle.zip
+*.egg-info

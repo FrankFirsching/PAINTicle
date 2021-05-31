@@ -98,8 +98,8 @@ class Particle:
 
     def project_back_to_triangle(self, paint_mesh):
         # Put the particle back to the triangle surface
-        location, normal, index, distance = paint_mesh.bvh.find_nearest(self.location)
+        location, normal, tri_index, barycentrics = paint_mesh.bvh.closest_point(self.location)
         if location is not None:
-            self.location = location
-            self.normal = normal
-            self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
+            self.location = mathutils.Vector(location)
+            self.normal = mathutils.Vector(normal)
+            self.tri_index = tri_index

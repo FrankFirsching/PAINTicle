@@ -32,21 +32,41 @@ def wait_for_debugger_attached():
     debugpy.wait_for_client()
 
 
+def fix_context():
+    """Fix bpy.context if some command (like .blend import) changed/emptied it"""
+    for window in bpy.context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'VIEW_3D':
+                for region in area.regions:
+                    if region.type == 'WINDOW':
+                        override = {'window': window, 'screen': screen, 'area': area, 'region': region}
+                        bpy.ops.screen.screen_full_area(override)
+                        break
+
+
 @pytest.fixture
 def default_scene():
     bpy.ops.wm.read_homefile(use_factory_startup=True)
+    # Need to call fix_context twice to restore the full screen area back to normal state
+    fix_context()
+    fix_context()
 
 
 def open_file(filename):
     script_dir = os.path.dirname(os.path.realpath(__file__))
     fullpath = os.path.join(script_dir, "testdata", filename)
     bpy.ops.wm.open_mainfile(filepath=fullpath)
+    # Need to call fix_context twice to restore the full screen area back to normal state
+    fix_context()
+    fix_context()
 
 
 class FakeContext(object):
-    def setup_screen_and_area(self):
-        self.screen = bpy.data.screens['Layout']
+    def setup_area_and_region(self):
         self.area = [x for x in self.screen.areas if x.type == "VIEW_3D"][0]
+        self.region = [x for x in self.area.regions if x.type == "WINDOW"][0]
+        self.region_data = [x for x in self.area.spaces if x.type == "VIEW_3D"][0].region_3d
 
     def setup_active_object(self, active_object):
         if active_object is not None:
@@ -62,9 +82,19 @@ def get_default_context(active_object=None):
     for x in dir(bpy.context):
         setattr(fake_context, x, getattr(bpy.context, x))
     # Find a 3D view area to mimic the real usage, where the user triggers the addon by clicking a button in the 3D view
-    fake_context.setup_screen_and_area()
+    fake_context.setup_area_and_region()
     fake_context.setup_active_object(active_object)
     return fake_context
+
+
+class FakeEvent(object):
+    def __init__(self, x, y):
+        self.mouse_x = x
+        self.mouse_y = y
+
+
+def get_fake_event(x=0, y=0):
+    return FakeEvent(x, y)
 
 
 def has_ui():
@@ -100,5 +130,6 @@ def no_validator():
 def is_close(v1, v2, tolerance):
     return (v1 >= v2 - tolerance) and (v1 <= v2 + tolerance)
 
+
 def is_close_vec(v1, v2, tolerance):
-    return all(is_close(x,y, tolerance) for x,y in zip(v1,v2))
+    return all(is_close(x, y, tolerance) for x, y in zip(v1, v2))
