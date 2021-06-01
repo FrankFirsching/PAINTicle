@@ -37,7 +37,6 @@ class TriangleMesh:
         self.mesh = mesh
         self.mesh.calc_normals_split()
         self.mesh.calc_loop_triangles()
-        self.build_poly_maps()
         self.build_bvh(context)
 
 
@@ -49,44 +48,3 @@ class TriangleMesh:
         normals = np.empty(len(self.mesh.loop_triangles)*9, dtype=np.single)
         self.mesh.loop_triangles.foreach_get("split_normals", normals)
         self.bvh = bvh.build_bvh(points, triangles, normals)
-
-    def triangle_for_point_on_poly(self, p, face_index):
-        eps = 0.0
-        tessellated = self.poly_to_tri[face_index]
-        for passes in range(2):
-            for tri_index in tessellated:
-                bary = self.barycentrics(p, tri_index)
-                if bary[0] >= eps and bary[1] >= eps and bary[2] >= eps:
-                    return tri_index
-            # Sometimes, we get a point slightly outside of a polygon, let's
-            # treat it as good as possible.
-            eps = -0.0001
-        print("WARNING: Couldn't find triangle for", p, "on", face_index)
-        return None
-
-    def barycentrics(self, p, tri_index,
-                     b0=mathutils.Vector((1, 0, 0)),
-                     b1=mathutils.Vector((0, 1, 0)),
-                     b2=mathutils.Vector((0, 0, 1))):
-        tri = self.mesh.loop_triangles[tri_index].vertices
-        verts = self.mesh.vertices
-        return mathutils.geometry.barycentric_transform(p, verts[tri[0]].co, verts[tri[1]].co, verts[tri[2]].co,
-                                                        b0, b1, b2)
-
-    def build_poly_maps(self):
-        """ Builds 2 maps, that allow mapping from triangles to polygons and
-            vice versa. """
-        self.poly_to_tri = [None]*len(self.mesh.polygons)
-        self.tri_to_poly = [None]*len(self.mesh.loop_triangles)
-        for tri in self.mesh.loop_triangles:
-            self.tri_to_poly[tri.index] = tri.polygon_index
-            if self.poly_to_tri[tri.polygon_index] is not None:
-                self.poly_to_tri[tri.polygon_index].append(tri.index)
-            else:
-                self.poly_to_tri[tri.polygon_index] = [tri.index]
-
-    def edgeStart(self, edgeId):
-        return self.mesh.loop_triangles[edgeId//3].vertices[edgeId % 3]
-
-    def edgeEnd(self, edgeId):
-        return self.mesh.loop_triangles[edgeId//3].vertices[(edgeId+1) % 3]

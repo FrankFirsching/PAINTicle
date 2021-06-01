@@ -7,7 +7,7 @@
 
 BEGIN_PAINTICLE_NAMESPACE
 
-typedef unsigned int ID;
+typedef int ID;
 const ID ID_NONE = static_cast<ID>(-1);
 
 template<class T>

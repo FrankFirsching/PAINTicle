@@ -51,7 +51,8 @@ PYBIND11_MODULE(bvh, m) {
 
     py::class_<BVH>(m, "BVH")
         .def(py::init<>())
-        .def("closest_point", &BVH::closestPoint);
+        .def("closest_point", &BVH::closestPoint)
+        .def("shoot_ray", &BVH::shootRay);
 
     m.def("build_bvh", &buildBVH_py, "Build the BVH acceleration structure");
 

@@ -80,3 +80,25 @@ def test_bvh_normal_interpolation():
     assert tstutils.is_close_vec(barycentrics, [0.15, 0.55, 0.3], min_tol)
     assert tstutils.is_close_vec(closest, [0.1, 0.7, 0], min_tol)
     assert tstutils.is_close_vec(normal, [5.15, 6.15, 0.0], min_tol)
+
+
+def test_bvh_intersection():
+    points = np.array([-1, -1, 0,
+                       +1, -1, 0,
+                       +1, +1, 0,
+                       -1, +1, 0], dtype=np.single)
+    triangles = np.array([0, 1, 2,    0, 2, 3], dtype=np.uintc)
+    normals = np.array([1, 2, 0,
+                        2, 3, 0,
+                        3, 4, 0,
+                        4, 5, 0,
+                        5, 6, 0,
+                        6, 7, 0], dtype=np.single)
+
+    x = bvh.build_bvh(points, triangles, normals)
+    closest, normal, tri_id, barycentrics = x.shoot_ray([0.1, 0, 0.7], [0, 1, -1])
+    assert tri_id == 1
+    assert tstutils.is_close_vec(barycentrics, [0.15, 0.55, 0.3], min_tol)
+    assert tstutils.is_close_vec(closest, [0.1, 0.7, 0], min_tol)
+    assert tstutils.is_close_vec(normal, [5.15, 6.15, 0.0], min_tol)
+    

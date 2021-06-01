@@ -21,9 +21,13 @@ public:
     {
         Vec3f p;
         Vec3f barycentrics;
-        ID primId;
+        ID primID;
         const BVH* bvh;
     };
+
+    //! A tupe, representing a point on the surface
+    /**! Elements are location, normal, tri_index, barycentrics */
+    typedef std::tuple<Vec3f, Vec3f, ID, Vec3f> SurfaceInfo;
 
     //! Default constructor
     BVH();
@@ -37,7 +41,11 @@ public:
 
     //! Compute the closes point on the mesh for given point p
     /**! @returns location, normal, tri_index, barycentrics */
-    std::tuple<Vec3f, Vec3f, ID, Vec3f> closestPoint(const Vec3f& p) const;
+    SurfaceInfo closestPoint(const Vec3f& p) const;
+
+    //! Shoot a ray and return the intersection
+    /**! @returns location, normal, tri_index, barycentrics */
+    SurfaceInfo shootRay(const Vec3f& origin, const Vec3f& direction) const;
 
     //! Get the coordinates of a corner of a triangle
     inline Vec3f point(const ID& primId, const ID& corner) const;

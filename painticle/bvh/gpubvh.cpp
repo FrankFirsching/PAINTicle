@@ -3,6 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <iterator>
+#include <limits>
 
 #include "vec3.h"
 
@@ -80,7 +81,7 @@ bool queryFunc(struct RTCPointQueryFunctionArguments* args)
         args->query->radius = d;
         userData->p = closest;
         userData->barycentrics = closestBarycentics;
-        userData->primId = args->primID;
+        userData->primID = args->primID;
         return true; // Return true to indicate that the query radius changed.
     }
     return false;
@@ -138,7 +139,7 @@ BVH::~BVH()
     rtcReleaseDevice(m_device);
 }
 
-std::tuple<Vec3f, Vec3f, ID, Vec3f> BVH::closestPoint(const Vec3f& p) const
+BVH::SurfaceInfo BVH::closestPoint(const Vec3f& p) const
 {
     RTCPointQuery query;
     query.x = p[0];
@@ -152,18 +153,55 @@ std::tuple<Vec3f, Vec3f, ID, Vec3f> BVH::closestPoint(const Vec3f& p) const
     PointQueryUserData userData;
     userData.p = {0,0,0};
     userData.barycentrics = {0,0,0};
-    userData.primId = ID_NONE;
+    userData.primID = ID_NONE;
     userData.bvh = this;
     rtcPointQuery(m_scene, &query, &context, &queryFunc, &userData);
 
     Vec3f n(0,0,0);
-    if(userData.primId!=ID_NONE && !m_normals.empty()) {
-        Vec3f n0 = normal(userData.primId, 0);
-        Vec3f n1 = normal(userData.primId, 1);
-        Vec3f n2 = normal(userData.primId, 2);
+    if(userData.primID!=ID_NONE && !m_normals.empty()) {
+        Vec3f n0 = normal(userData.primID, 0);
+        Vec3f n1 = normal(userData.primID, 1);
+        Vec3f n2 = normal(userData.primID, 2);
         n = applyBarycentics(userData.barycentrics, n0, n1, n2);
     }
-    return std::make_tuple(userData.p, n, userData.primId, userData.barycentrics);
+    return std::make_tuple(userData.p, n, userData.primID, userData.barycentrics);
+}
+
+
+BVH::SurfaceInfo BVH::shootRay(const Vec3f& origin, const Vec3f& direction) const
+{
+    RTCIntersectContext context;
+    rtcInitIntersectContext(&context);
+    RTCRayHit rayHit;
+    rayHit.ray.org_x = origin[0];
+    rayHit.ray.org_y = origin[1];
+    rayHit.ray.org_z = origin[2];
+    rayHit.ray.dir_x = direction[0];
+    rayHit.ray.dir_y = direction[1];
+    rayHit.ray.dir_z = direction[2];
+    rayHit.ray.tnear = 0.0f;
+    rayHit.ray.tfar = std::numeric_limits<float>::infinity();
+    rayHit.ray.time = 0.0f;
+    rayHit.ray.id = 0;
+    rayHit.ray.mask = static_cast<unsigned int>(-1); // -1 means: don't mask anything, 0 means: mask everything
+    rayHit.ray.flags = 0;
+    rayHit.hit.primID = RTC_INVALID_GEOMETRY_ID;
+    rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+    rtcIntersect1(m_scene, &context, &rayHit);
+    Vec3f p(0,0,0);
+    Vec3f n(0,0,0);
+    ID tri_id = ID_NONE;
+    Vec3f barycentrics(0,0,0);
+    if(rayHit.hit.geomID!=RTC_INVALID_GEOMETRY_ID) {
+        tri_id = rayHit.hit.primID;
+        p = origin + rayHit.ray.tfar * direction;
+        barycentrics = {1-rayHit.hit.u-rayHit.hit.v, rayHit.hit.u, rayHit.hit.v};
+        Vec3f n0 = normal(tri_id, 0);
+        Vec3f n1 = normal(tri_id, 1);
+        Vec3f n2 = normal(tri_id, 2);
+        n = applyBarycentics(barycentrics, n0, n1, n2);
+    }
+    return std::make_tuple(p, n, tri_id, barycentrics);
 }
 
 END_PAINTICLE_NAMESPACE

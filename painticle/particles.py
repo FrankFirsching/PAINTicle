@@ -80,8 +80,7 @@ class Particles:
                                                  event.mouse_x+offset_x,
                                                  event.mouse_y+offset_y)
 
-        location, normal, face_index = self.ray_cast_on_object(ray_origin,
-                                                               ray_direction)
+        location, normal, tri_index = self.ray_cast_on_object(ray_origin, ray_direction)
         if location is not None:
             ray_direction_unit = ray_direction.normalized()
             view_speed = particle_settings.physics.initial_speed * ray_direction_unit
@@ -91,7 +90,6 @@ class Particles:
                                             random.uniform(-max_initial_random, max_initial_random),
                                             random.uniform(-max_initial_random, max_initial_random)))
             initial_surface_speed = view_speed - view_speed.project(normal)
-            tri_index = self.paint_mesh.triangle_for_point_on_poly(location, face_index)
             brush_color = self.get_brush_color(context)
             p = particle.Particle(location, tri_index, brush_color, self.paint_mesh, particle_settings)
             p.speed = initial_surface_speed
@@ -156,9 +154,8 @@ class Particles:
         ray_direction_obj = matrix_inv.to_3x3() @ ray_direction
 
         # cast the ray
-        obj = self.paint_mesh.object
-        success, location, normal, face_index = obj.ray_cast(ray_origin_obj, ray_direction_obj)
-        if success:
-            return location, normal, face_index
+        location, normal, tri_index, _ = self.paint_mesh.bvh.shoot_ray(ray_origin_obj, ray_direction_obj)
+        if tri_index != -1:
+            return location, normal, tri_index
         else:
             return None, None, None

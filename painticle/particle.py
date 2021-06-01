@@ -40,7 +40,6 @@ class Particle:
         self.tri_index = tri_index
         self.acceleration = mathutils.Vector((0, 0, 0))
         self.speed = mathutils.Vector((0, 0, 0))
-        self.barycentric = mathutils.Vector((0, 0, 0))
         self.normal = mathutils.Vector((0, 0, 0))
         self.uv = mathutils.Vector((0, 0))
 
@@ -84,22 +83,13 @@ class Particle:
         self.update_location_dependent_properties(paint_mesh)
 
     def update_location_dependent_properties(self, paint_mesh):
-        self.project_back_to_triangle(paint_mesh)
-        bary = paint_mesh.barycentrics(self.location, self.tri_index)
-        self.barycentric = bary
-
-        if bary[0] > 0 and bary[1] > 0 and bary[2] > 0:
-            # If we're within the triangle...
-            mesh = paint_mesh.mesh
-            tri = mesh.loop_triangles[self.tri_index]
-            uvMap = mesh.uv_layers.active.data
-            # Fully unrolled uv interpolation, due to performance reasons
-            self.uv = uvMap[tri.loops[0]].uv*bary[0] + uvMap[tri.loops[1]].uv*bary[1] + uvMap[tri.loops[2]].uv*bary[2]
-
-    def project_back_to_triangle(self, paint_mesh):
         # Put the particle back to the triangle surface
         location, normal, tri_index, barycentrics = paint_mesh.bvh.closest_point(self.location)
-        if location is not None:
+        if tri_index != -1:
             self.location = mathutils.Vector(location)
             self.normal = mathutils.Vector(normal)
             self.tri_index = tri_index
+            tri = paint_mesh.mesh.loop_triangles[self.tri_index]
+            uvMap = paint_mesh.mesh.uv_layers.active.data
+            self.uv = utils.apply_barycentrics(barycentrics, uvMap[tri.loops[0]].uv,
+                                               uvMap[tri.loops[1]].uv, uvMap[tri.loops[2]].uv)

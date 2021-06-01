@@ -38,6 +38,10 @@ def matrix_to_tuple(m):
             m[0][3], m[1][3], m[2][3], m[3][3])
 
 
+def apply_barycentrics(baries, a, b, c):
+    return baries[0]*a + baries[1]*b + baries[2]*c
+
+
 # We cache the git version, so we don't need to touch everytime the preferences panel draws down to the file-system
 _cached_deployment_version = None
 
