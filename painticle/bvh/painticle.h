@@ -17,3 +17,5 @@
 
 #define BEGIN_PAINTICLE_NAMESPACE namespace painticle {
 #define END_PAINTICLE_NAMESPACE }
+
+typedef unsigned char Byte;

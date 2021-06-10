@@ -37,10 +37,27 @@ class TriangleMesh:
         self.mesh = mesh
         self.mesh.calc_normals_split()
         self.mesh.calc_loop_triangles()
-        self.build_bvh(context)
+        self._build_numpy_tris()
+        self._build_bvh()
+        self.cached_uv_layer = None
+        self.cached_uv_layer_index = None
 
+    def get_active_uvs(self):
+        active_uv_index = self.mesh.uv_layers.active_index
+        if self.cached_uv_layer_index != active_uv_index:
+            uv_data = self.mesh.uv_layers.active.data
+            num_uvs = len(uv_data)
+            self.cached_uv_layer = np.empty((num_uvs, 2), 'f')
+            uv_data.foreach_get("uv", np.reshape(self.cached_uv_layer, 2*num_uvs))
+            self.cached_uv_layer_index = active_uv_index
+        return self.cached_uv_layer
 
-    def build_bvh(self, context):
+    def _build_numpy_tris(self):
+        num_tris = len(self.mesh.loop_triangles)
+        self.triangles = np.empty((num_tris, 3), np.uintc)
+        self.mesh.loop_triangles.foreach_get("loops", np.reshape(self.triangles, 3*num_tris))
+
+    def _build_bvh(self):
         points = np.empty((len(self.mesh.vertices), 3), dtype=np.single)
         self.mesh.vertices.foreach_get("co", np.reshape(points, len(self.mesh.vertices)*3))
         triangles = np.empty(len(self.mesh.loop_triangles)*3, dtype=np.uintc)

@@ -22,7 +22,7 @@ import types
 
 from painticle import dependencies
 
-import tstutils
+from . import tstutils
 
 
 def test_is_available():

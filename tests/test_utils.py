@@ -23,7 +23,7 @@ import mathutils
 
 from painticle import utils
 
-import tstutils
+from . import tstutils
 
 
 def test_lerp():

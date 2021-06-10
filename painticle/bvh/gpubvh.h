@@ -40,9 +40,15 @@ public:
         const BVH* bvh;
     };
 
-    //! A tupe, representing a point on the surface
+    //! A structure, representing a point on the surface
     /**! Elements are location, normal, tri_index, barycentrics */
-    typedef std::tuple<Vec3f, Vec3f, ID, Vec3f> SurfaceInfo;
+    struct SurfaceInfo {
+        Vec3f location;
+        Vec3f normal;
+        ID tri_index;
+        Vec3f barycentrics;
+    };
+
 
     //! Default constructor
     BVH();
@@ -56,7 +62,7 @@ public:
 
     //! Compute the closes point on the mesh for given point p
     /**! @returns location, normal, tri_index, barycentrics */
-    SurfaceInfo closestPoint(const Vec3f& p) const;
+    SurfaceInfo closestPoint(float x, float y, float z) const;
 
     //! Shoot a ray and return the intersection
     /**! @returns location, normal, tri_index, barycentrics */
@@ -101,5 +107,6 @@ inline Vec3f BVH::normal(const ID& primId, const ID& corner) const
     assert(m_normals.size() > primId*3);
     return m_normals[primId*3+corner];
 }
+
 
 END_PAINTICLE_NAMESPACE

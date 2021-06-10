@@ -21,7 +21,7 @@ import numpy as np
 
 from painticle import bvh
 
-import tstutils
+from . import tstutils
 
 min_tol = 0.000001
 
@@ -35,30 +35,30 @@ def test_bvh_closest_point():
     normals = np.array([], dtype=np.single)
 
     x = bvh.build_bvh(points, triangles, normals)
-    closest, _, tri_id, barycentrics = x.closest_point([0.1, 0.7, 1])
-    assert tstutils.is_close_vec(barycentrics, [0.15, 0.55, 0.3], min_tol)
-    assert tstutils.is_close_vec(closest, [0.1, 0.7, 0], min_tol)
-    assert tri_id == 1
+    surface_info = x.closest_point(0.1, 0.7, 1)
+    assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
+    assert tstutils.is_close_vec(surface_info.location, [0.1, 0.7, 0], min_tol)
+    assert surface_info.tri_index == 1
 
-    closest, _, tri_id, barycentrics = x.closest_point([0.1, 0.7, -1])
-    assert tstutils.is_close_vec(closest, [0.1, 0.7, 0], min_tol)
-    assert tstutils.is_close_vec(barycentrics, [0.15, 0.55, 0.3], min_tol)
-    assert tri_id == 1
+    surface_info = x.closest_point(0.1, 0.7, -1)
+    assert tstutils.is_close_vec(surface_info.location, [0.1, 0.7, 0], min_tol)
+    assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
+    assert surface_info.tri_index == 1
 
-    closest, _, tri_id, barycentrics = x.closest_point([1.1, 0.7, 0])
-    assert tstutils.is_close_vec(closest, [1.0, 0.7, 0], min_tol)
-    assert tstutils.is_close_vec(barycentrics, [0, 0.15, 0.85], min_tol)
-    assert tri_id == 0
+    surface_info = x.closest_point(1.1, 0.7, 0)
+    assert tstutils.is_close_vec(surface_info.location, [1.0, 0.7, 0], min_tol)
+    assert tstutils.is_close_vec(surface_info.barycentrics, [0, 0.15, 0.85], min_tol)
+    assert surface_info.tri_index == 0
 
-    closest, _, tri_id, barycentrics = x.closest_point([-1.1, 0.7, 0])
-    assert tstutils.is_close_vec(closest, [-1.0, 0.7, 0], min_tol)
-    assert tstutils.is_close_vec(barycentrics, [0.15, 0, 0.85], min_tol)
-    assert tri_id == 1
+    surface_info = x.closest_point(-1.1, 0.7, 0)
+    assert tstutils.is_close_vec(surface_info.location, [-1.0, 0.7, 0], min_tol)
+    assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0, 0.85], min_tol)
+    assert surface_info.tri_index == 1
 
-    closest, _, tri_id, barycentrics = x.closest_point([0.5, 0.5, 0])
-    assert tstutils.is_close_vec(closest, [0.5, 0.5, 0], min_tol)
-    assert tstutils.is_close_vec(barycentrics, [0.25, 0, 0.75], min_tol)
-    assert tri_id == 0
+    surface_info = x.closest_point(0.5, 0.5, 0)
+    assert tstutils.is_close_vec(surface_info.location, [0.5, 0.5, 0], min_tol)
+    assert tstutils.is_close_vec(surface_info.barycentrics, [0.25, 0, 0.75], min_tol)
+    assert surface_info.tri_index == 0
 
 
 def test_bvh_normal_interpolation():
@@ -75,11 +75,11 @@ def test_bvh_normal_interpolation():
                         6, 7, 0], dtype=np.single)
 
     x = bvh.build_bvh(points, triangles, normals)
-    closest, normal, tri_id, barycentrics = x.closest_point([0.1, 0.7, 1])
-    assert tri_id == 1
-    assert tstutils.is_close_vec(barycentrics, [0.15, 0.55, 0.3], min_tol)
-    assert tstutils.is_close_vec(closest, [0.1, 0.7, 0], min_tol)
-    assert tstutils.is_close_vec(normal, [5.15, 6.15, 0.0], min_tol)
+    surface_info = x.closest_point(0.1, 0.7, 1)
+    assert surface_info.tri_index == 1
+    assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
+    assert tstutils.is_close_vec(surface_info.location, [0.1, 0.7, 0], min_tol)
+    assert tstutils.is_close_vec(surface_info.normal, [5.15, 6.15, 0.0], min_tol)
 
 
 def test_bvh_intersection():
@@ -96,9 +96,8 @@ def test_bvh_intersection():
                         6, 7, 0], dtype=np.single)
 
     x = bvh.build_bvh(points, triangles, normals)
-    closest, normal, tri_id, barycentrics = x.shoot_ray([0.1, 0, 0.7], [0, 1, -1])
-    assert tri_id == 1
-    assert tstutils.is_close_vec(barycentrics, [0.15, 0.55, 0.3], min_tol)
-    assert tstutils.is_close_vec(closest, [0.1, 0.7, 0], min_tol)
-    assert tstutils.is_close_vec(normal, [5.15, 6.15, 0.0], min_tol)
-    
+    surface_info = x.shoot_ray([0.1, 0, 0.7], [0, 1, -1])
+    assert surface_info.tri_index == 1
+    assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
+    assert tstutils.is_close_vec(surface_info.location, [0.1, 0.7, 0], min_tol)
+    assert tstutils.is_close_vec(surface_info.normal, [5.15, 6.15, 0.0], min_tol)

@@ -26,30 +26,27 @@ typedef int ID;
 const ID ID_NONE = static_cast<ID>(-1);
 
 template<class T>
-class Vec3 : public std::array<T, 3>
+class Vec3
 {
-    //! Don't repeat the full parent class everytime
-    typedef std::array<T, 3> Inherited;
-
 public:
     Vec3()
     {}
 
-    Vec3(T x, T y,T z)
-    : Inherited{x,y,z}
+    Vec3(T x_, T y_, T z_)
+    : x(x_), y(y_), z(z_)
     {}
 
     inline Vec3 operator-(const Vec3& other) const
-    { return Vec3(x()-other.x(), y()-other.y(), z()-other.z()); }
+    { return Vec3(x-other.x, y-other.y, z-other.z); }
 
     inline T dot(const Vec3& other) const
-    { return x()*other.x() + y()*other.y() + z()*other.z(); }
+    { return x*other.x + y*other.y + z*other.z; }
 
     inline Vec3 operator*(T f) const
-    { return Vec3(f*x(), f*y(), f*z()); }
+    { return Vec3(f*x, f*y, f*z); }
 
     inline Vec3 operator+(const Vec3& other) const
-    { return Vec3(x()+other.x(), y()+other.y(), z()+other.z()); }
+    { return Vec3(x+other.x, y+other.y, z+other.z); }
 
     inline T distance(const Vec3& other) const
     { return (other-*this).length(); }
@@ -60,14 +57,26 @@ public:
     inline T sqrLength() const
     { return this->dot(*this); }
 
-    inline T x() const
-    { return (*this)[0]; }
+    inline T& operator[](std::size_t idx)
+    { return (&x)[idx]; }
 
-    inline T y() const
-    { return (*this)[1]; }
+    inline const T& operator[](std::size_t idx) const
+    { return (&x)[idx]; }
 
-    inline T z() const
-    { return (*this)[2]; }
+    inline std::size_t size() const
+    { return 3; }
+
+    typedef const float* const_iterator;
+
+    inline const_iterator begin() const
+    { return &x; }
+
+    inline const_iterator end() const
+    { return begin()+size(); }
+
+    T x;
+    T y;
+    T z;
 };
 
 template<class T>

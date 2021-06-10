@@ -29,7 +29,7 @@ import numpy as np
 
 from painticle import gpu_utils
 
-import tstutils
+from . import tstutils
 
 
 def test_shader_loading():

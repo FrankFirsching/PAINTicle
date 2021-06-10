@@ -23,7 +23,7 @@ import mathutils
 
 from painticle import trianglemesh
 
-import tstutils
+from . import tstutils
 
 
 def get_triangle_mesh(blend_object_name):

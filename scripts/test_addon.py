@@ -45,6 +45,10 @@ os.chdir(tests_results_path)
 if 'BLENDER_CACHE' not in os.environ:
     os.environ['BLENDER_CACHE'] = os.path.join(tests_results_path, "blender_cache")
 
+# Setup a local config and script installation environment to not pollute the user's one
+os.environ['BLENDER_USER_CONFIG'] = os.path.join(os.environ['BLENDER_CACHE'], "local_config_"+args.rev)
+os.environ['BLENDER_USER_SCRIPTS'] = os.path.join(os.environ['BLENDER_CACHE'], "local_scripts")
+
 config = {
     "run_in_window": args.ui,
     "tests": tests_path

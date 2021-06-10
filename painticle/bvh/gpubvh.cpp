@@ -154,14 +154,14 @@ BVH::~BVH()
     rtcReleaseDevice(m_device);
 }
 
-BVH::SurfaceInfo BVH::closestPoint(const Vec3f& p) const
+BVH::SurfaceInfo BVH::closestPoint(float x, float y, float z) const
 {
     RTCPointQuery query;
-    query.x = p[0];
-    query.y = p[1];
-    query.z = p[2];
+    query.x = x;
+    query.y = y;
+    query.z = z;
     query.time = 0;
-    query.radius = 10;
+    query.radius = std::numeric_limits<float>::infinity();
 
     RTCPointQueryContext context;
     rtcInitPointQueryContext(&context);
@@ -179,7 +179,7 @@ BVH::SurfaceInfo BVH::closestPoint(const Vec3f& p) const
         Vec3f n2 = normal(userData.primID, 2);
         n = applyBarycentics(userData.barycentrics, n0, n1, n2);
     }
-    return std::make_tuple(userData.p, n, userData.primID, userData.barycentrics);
+    return { userData.p, n, userData.primID, userData.barycentrics };
 }
 
 
@@ -216,7 +216,7 @@ BVH::SurfaceInfo BVH::shootRay(const Vec3f& origin, const Vec3f& direction) cons
         Vec3f n2 = normal(tri_id, 2);
         n = applyBarycentics(barycentrics, n0, n1, n2);
     }
-    return std::make_tuple(p, n, tri_id, barycentrics);
+    return { p, n, tri_id, barycentrics };
 }
 
 END_PAINTICLE_NAMESPACE

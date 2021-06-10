@@ -33,11 +33,10 @@ class Particle:
     rnd = random.Random()
 
     """ A single particle """
-    def __init__(self, location, tri_index, color, paint_mesh, particle_settings):
+    def __init__(self, location, color, paint_mesh, particle_settings):
         self.id = Particle._next_particle_id
         Particle._next_particle_id += 1
-        self.location = location
-        self.tri_index = tri_index
+        self.location = mathutils.Vector(location)
         self.acceleration = mathutils.Vector((0, 0, 0))
         self.speed = mathutils.Vector((0, 0, 0))
         self.normal = mathutils.Vector((0, 0, 0))
@@ -84,12 +83,12 @@ class Particle:
 
     def update_location_dependent_properties(self, paint_mesh):
         # Put the particle back to the triangle surface
-        location, normal, tri_index, barycentrics = paint_mesh.bvh.closest_point(self.location)
-        if tri_index != -1:
-            self.location = mathutils.Vector(location)
-            self.normal = mathutils.Vector(normal)
-            self.tri_index = tri_index
-            tri = paint_mesh.mesh.loop_triangles[self.tri_index]
+        p = self.location
+        surface_info = paint_mesh.bvh.closest_point(p[0], p[1], p[2])
+        if surface_info.tri_index != -1:
+            self.location = mathutils.Vector(surface_info.location)
+            self.normal = mathutils.Vector(surface_info.normal)
+            tri = paint_mesh.mesh.loop_triangles[surface_info.tri_index]
             uvMap = paint_mesh.mesh.uv_layers.active.data
-            self.uv = utils.apply_barycentrics(barycentrics, uvMap[tri.loops[0]].uv,
+            self.uv = utils.apply_barycentrics(surface_info.barycentrics, uvMap[tri.loops[0]].uv,
                                                uvMap[tri.loops[1]].uv, uvMap[tri.loops[2]].uv)

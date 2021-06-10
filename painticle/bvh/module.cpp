@@ -14,6 +14,7 @@
 // along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <Python.h>
+#include <cstddef>
 
 #include "gpubvh.h"
 
@@ -21,10 +22,13 @@
 #include "pybind11/stl.h"
 #include <pybind11/numpy.h>
 
+#include <tbb/parallel_for.h>
+
 using namespace painticle;
 
 namespace {
 
+/** Factory function to create a BVH from numpy arrays specifying the geometry. */
 BVH buildBVH_py(pybind11::array_t<float> points, pybind11::array_t<unsigned int> triangles,
                 pybind11::array_t<float> normals)
 {
@@ -42,6 +46,37 @@ BVH buildBVH_py(pybind11::array_t<float> points, pybind11::array_t<unsigned int>
     return BVH(static_cast<Vec3f*>(points_buf.ptr), points.size()/3,
                static_cast<Vec3u*>(triangles_buf.ptr), triangles.size()/3,
                static_cast<Vec3f*>(normals_buf.ptr), normals.size()/3);
+}
+
+/** A parallel numpy supported version of the closest_point function of the BVH. */
+pybind11::array_t<BVH::SurfaceInfo> closest_points_bvh(BVH& bvh, pybind11::array_t<float> points)
+{
+    if(points.size() %3 != 0)
+        throw std::runtime_error("Points buffer needs 3-dimensional coordinates");
+    size_t numPoints = points.size() / 3;
+    pybind11::buffer_info points_buf = points.request();
+    size_t stride = points_buf.strides[0];
+    const Byte* buffer_ptr = static_cast<const Byte*>(points_buf.ptr);
+
+    pybind11::array_t<BVH::SurfaceInfo> result(numPoints);
+    pybind11::buffer_info result_buf = result.request();
+    BVH::SurfaceInfo* result_ptr = static_cast<BVH::SurfaceInfo*>(result_buf.ptr);
+
+#ifdef PAINTICLE_RUN_SINGLE_THREADED
+    for(size_t i=0; i<numPoints; ++i) {
+        const Vec3f& point = *reinterpret_cast<const Vec3f*>(buffer_ptr+i*stride);
+        result_ptr[i] = bvh.closestPoint(point.x, point.y, point.z);
+    }
+#else
+    tbb::parallel_for(tbb::blocked_range<size_t>(0,numPoints), [&](tbb::blocked_range<size_t> r) {
+        for(size_t i=r.begin(); i<r.end(); ++i) {
+            const Vec3f& point = *reinterpret_cast<const Vec3f*>(buffer_ptr+i*stride);
+            result_ptr[i] = bvh.closestPoint(point.x, point.y, point.z);
+        }
+    });
+#endif
+
+    return result;
 }
 
 }
@@ -62,13 +97,23 @@ PYBIND11_MODULE(bvh, m) {
     namespace py = pybind11;
     m.doc() = "A specific BVH acceleration module for PAINTicle";
 
+    // Numpy support
+    PYBIND11_NUMPY_DTYPE(Vec3f, x,y,z);
+    PYBIND11_NUMPY_DTYPE(BVH::SurfaceInfo, location, normal, tri_index, barycentrics);
+
+    // Class definitions
+    py::class_<BVH::SurfaceInfo>(m, "SurfaceInfo")
+        .def_readonly("location", &BVH::SurfaceInfo::location)
+        .def_readonly("normal", &BVH::SurfaceInfo::normal)
+        .def_readonly("tri_index", &BVH::SurfaceInfo::tri_index)
+        .def_readonly("barycentrics", &BVH::SurfaceInfo::barycentrics);
 
 
     py::class_<BVH>(m, "BVH")
         .def(py::init<>())
         .def("closest_point", &BVH::closestPoint)
+        .def("closest_points", &closest_points_bvh)
         .def("shoot_ray", &BVH::shootRay);
 
     m.def("build_bvh", &buildBVH_py, "Build the BVH acceleration structure");
-
 }
