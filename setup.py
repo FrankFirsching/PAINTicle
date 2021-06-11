@@ -36,6 +36,9 @@ def setup_compiler_dirs(dependencies, bost_modules=None):
                     lib_file = lib_file.replace("lib", "")
                     if dep != "boost" or lib_file in bost_modules:
                         libraries.append(lib_file)
+    if sys.platform == "win32":
+        # We need some fixed libs on Windows
+        libraries.extend(["advapi32", "psapi"])
     return include_dirs, library_dirs, libraries
 
 

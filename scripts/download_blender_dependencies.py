@@ -52,7 +52,7 @@ def download_dependencies(blender_release, dependencies=None, clean=False):
         os.makedirs(deps_path)
     for dependency in dependencies:
         print("Installing dependency", dependency)
-        cmd = ["svn", "--non-interactive", "checkout", os.path.join(svn_repo_url, dependency),
+        cmd = ["svn", "--non-interactive", "checkout", svn_repo_url+"/"+dependency,
                os.path.join(deps_path, dependency)]
         call(cmd)
 
@@ -60,7 +60,7 @@ def download_dependencies(blender_release, dependencies=None, clean=False):
 def get_downloaded_blender_version():
     cmd = ["svn", "info", os.path.join(dependencies_path(), "python")]
     result = call(cmd, silent=True)
-    regex = re.compile("URL: https://svn.blender.org/svnroot/bf-blender/tags/blender-(.*)-release/lib/linux_centos7_x86_64/python")
+    regex = re.compile("URL: https://svn.blender.org/svnroot/bf-blender/tags/blender-(.*)-release/lib/")
     found = regex.findall(result.stdout)
     return found[0]
 
