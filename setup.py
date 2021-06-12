@@ -6,9 +6,6 @@ import sys
 import glob
 import re
 
-from scripts import download_blender_dependencies
-blender_version = download_blender_dependencies.get_downloaded_blender_version()
-
 
 def setup_compiler_dirs(dependencies, bost_modules=None):
     script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -17,14 +14,11 @@ def setup_compiler_dirs(dependencies, bost_modules=None):
     library_dirs = []
     libraries = []
     for dep in dependencies:
+        if dep == "python":
+            continue # Python's include and lib dirs are taken care of by setuptools
         pkg_dir = os.path.join(dependencies_dir, dep)
         include_dir = os.path.join(pkg_dir, "include")
         library_dir = os.path.join(pkg_dir, "lib")
-        if dep == "python":
-            if blender_version == "2.92":
-                include_dir = os.path.join(include_dir, "python3.7m")
-            else:
-                include_dir = os.path.join(include_dir, "python3.9")
         if os.path.exists(include_dir):
             include_dirs.append(include_dir)
         if os.path.exists(library_dir):
