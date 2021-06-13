@@ -94,6 +94,7 @@ jobs:
           python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
       # Create the addon's zip
       - name: Package
+        shell: bash
         run: |
           scripts/deploy.sh -s build/out/painticle -t PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
       # Pull requests store artifacts
