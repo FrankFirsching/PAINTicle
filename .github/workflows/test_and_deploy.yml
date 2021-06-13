@@ -89,7 +89,7 @@ jobs:
       - name: Test Blender ${{ matrix.blender-version }} with pytest (non Linux version)
         if: ${{ ! startsWith(matrix.os, 'ubuntu') }}
         env:
-          BLENDER_ADDON_TESTER_NO_DIR_CLEANUP=1
+          BLENDER_ADDON_TESTER_NO_DIR_CLEANUP: 1
         run: |
           python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
       # Create the addon's zip
