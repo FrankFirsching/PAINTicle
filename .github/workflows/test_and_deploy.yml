@@ -40,9 +40,13 @@ jobs:
         - blender-version: 2.92
           os: ubuntu-latest
           python_executable: bin/python3.7m
-        - blender-version: 2.93
+        #- blender-version: 2.93
+        #  os: ubuntu-latest
+        #  python_executable: bin/python3.9
+        exclude:
+        # python manylinux wheels for moderngl are not yet available, let's exclude this for the moment
+        - blender-version: "2.93"
           os: ubuntu-latest
-          python_executable: bin/python3.9
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
