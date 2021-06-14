@@ -1,5 +1,6 @@
 {
-    "blender.addon.loadDirectory": "./painticle",
+    "blender.addon.buildTaskName": "build",
+    "blender.addon.loadDirectory": "./build/out/painticle",
     "blender.addon.moduleName": "painticle",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
@@ -17,5 +18,11 @@
     ],
     "editor.rulers": [
         120
-    ]
+    ],
+    "search.exclude": {
+        "**/build": true
+    },
+    "files.exclude": {
+        "*.egg-info": true,
+    },
 }

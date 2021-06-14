@@ -21,7 +21,7 @@ import pytest
 
 from painticle import gpu_utils
 
-import tstutils
+from . import tstutils
 
 
 @pytest.mark.skipif(tstutils.no_validator(), reason="requires GLSL validator")

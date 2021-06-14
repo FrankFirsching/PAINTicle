@@ -23,7 +23,7 @@ import moderngl
 
 from painticle import gpu_utils
 
-import tstutils
+from . import tstutils
 
 
 @pytest.fixture

@@ -6,7 +6,7 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main ]
+    branches: [ '**' ]
     tags: [ "v*" ]
   pull_request:
     branches: [ main ]
@@ -17,19 +17,57 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # Test the add-on
-  test:
+  build_test_and_deploy:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       max-parallel: 4
       matrix:
-        blender-version: ["2.92"]
+        blender-version: ["2.92", "2.93"]
         os: [ubuntu-latest, windows-latest]
-
+        include:
+        - os: ubuntu-latest
+          os_tag: Linux
+        - os: windows-latest
+          os_tag: Windows
+        - blender-version: 2.92
+          os: windows-latest
+          python_executable: 37/bin/python.exe
+        - blender-version: 2.93
+          os: windows-latest
+          python_executable: 39/bin/python.exe
+        - blender-version: 2.92
+          os: ubuntu-latest
+          python_executable: bin/python3.7m
+        #- blender-version: 2.93
+        #  os: ubuntu-latest
+        #  python_executable: bin/python3.9
+        exclude:
+        # python manylinux wheels for moderngl are not yet available, let's exclude this for the moment
+        - blender-version: "2.93"
+          os: ubuntu-latest
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      # Setup the msys windows bash (git-bash doesn't have rsync and zip)
+      - name: Setup and install msys2 packages
+        uses: msys2/setup-msys2@v2
+        if: startsWith(matrix.os, 'windows')
+        with:
+          release: false
+          install: |
+            rsync
+            zip
+      # Swtich default bash to msys
+      - name: switch git-bash shell to msys2 shell by adding msys2 path to PATH front
+        if: startsWith(matrix.os, 'windows')
+        run: echo "C:\msys64\usr\bin" >> $GITHUB_PATH
+        shell: bash
       # Setup Python 3.9
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
@@ -47,8 +85,15 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt update
-          sudo apt install -f -y blender
-          sudo apt-get install xvfb
+          sudo apt install -f -y blender xvfb subversion
+      # Download dependencies
+      - name: Download blender dependencies
+        run: |
+          python scripts/download_blender_dependencies.py ${{ matrix.blender-version }}
+      # Build the add-on
+      - name: Build it
+        run: |
+          build/dependencies/python/${{matrix.python_executable}} setup.py build --build-lib=build/out/
       # On Linux run with UI
       - name: Test Blender ${{ matrix.blender-version }} with pytest (Linux version)
         if: startsWith(matrix.os, 'ubuntu')
@@ -56,45 +101,41 @@ jobs:
           python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
       # On Windows only run the non-UI tests (hangs otherwise)
       - name: Test Blender ${{ matrix.blender-version }} with pytest (non Linux version)
-        if: ${{ ! startsWith(matrix.os, 'ubuntu') }}
+        if: startsWith(matrix.os, 'windows')
+        env:
+          BLENDER_ADDON_TESTER_NO_DIR_CLEANUP: 1
         run: |
           python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
-
-  # And is successful, deploy to Development Build
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      - name: Create zip
+      # Create the addon's zip
+      - name: Package
+        shell: bash
         run: |
-          scripts/deploy.sh -s painticle -t PAINTicle.zip
-      # Pull requests store artifacts
+          scripts/deploy.sh -s build/out/painticle -t PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
+      # Pull requests and non-main branches store artifacts
       - name: Archive production artifacts
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || (!startswith(github.ref, 'refs/heads/main') && !startswith(github.ref, 'refs/tags')) }}
         uses: actions/upload-artifact@v2
         with:
-          name: built-addon
+          name: PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
           path: |
-            PAINTicle.zip
+            PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
       # Pushes deploy to development build
       - name: "Development Build release"
         uses: "marvinpinto/action-automatic-releases@latest"
-        if: ${{ github.event_name == 'push' && !startswith( github.ref, 'refs/tags/' ) }}
+        if: ${{ github.event_name == 'push' && startswith(github.ref, 'refs/heads/main') }}
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
           prerelease: true
           title: "Development Build"
           files: |
-            PAINTicle.zip
+            PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
       # Tags deploy to named release
       - name: "Tagged release"
         uses: "marvinpinto/action-automatic-releases@latest"
-        if: ${{ github.event_name == 'push' && startswith( github.ref, 'refs/tags/' ) }}
+        if: ${{ github.event_name == 'push' && startswith(github.ref, 'refs/tags/') }}
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
           files: |
-            PAINTicle.zip
+            PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip

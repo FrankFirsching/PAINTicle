@@ -17,11 +17,12 @@
 
 # A mesh helper class, that allows easy acccess to triangles of polys
 
-import bpy
 import mathutils
-import sys
 
-from painticle.utils import Error
+import numpy as np
+
+from .utils import Error
+from . import bvh
 
 
 class TriangleMesh:
@@ -36,47 +37,31 @@ class TriangleMesh:
         self.mesh = mesh
         self.mesh.calc_normals_split()
         self.mesh.calc_loop_triangles()
-        self.build_poly_maps()
-        depsgraph = context.evaluated_depsgraph_get()
-        self.bvh = mathutils.bvhtree.BVHTree.FromObject(self.object, depsgraph)
+        self._build_numpy_tris()
+        self._build_bvh()
+        self.cached_uv_layer = None
+        self.cached_uv_layer_index = None
 
-    def triangle_for_point_on_poly(self, p, face_index):
-        eps = 0.0
-        tessellated = self.poly_to_tri[face_index]
-        for passes in range(2):
-            for tri_index in tessellated:
-                bary = self.barycentrics(p, tri_index)
-                if bary[0] >= eps and bary[1] >= eps and bary[2] >= eps:
-                    return tri_index
-            # Sometimes, we get a point slightly outside of a polygon, let's
-            # treat it as good as possible.
-            eps = -0.0001
-        print("WARNING: Couldn't find triangle for", p, "on", face_index)
-        return None
+    def get_active_uvs(self):
+        active_uv_index = self.mesh.uv_layers.active_index
+        if self.cached_uv_layer_index != active_uv_index:
+            uv_data = self.mesh.uv_layers.active.data
+            num_uvs = len(uv_data)
+            self.cached_uv_layer = np.empty((num_uvs, 2), 'f')
+            uv_data.foreach_get("uv", np.reshape(self.cached_uv_layer, 2*num_uvs))
+            self.cached_uv_layer_index = active_uv_index
+        return self.cached_uv_layer
 
-    def barycentrics(self, p, tri_index,
-                     b0=mathutils.Vector((1, 0, 0)),
-                     b1=mathutils.Vector((0, 1, 0)),
-                     b2=mathutils.Vector((0, 0, 1))):
-        tri = self.mesh.loop_triangles[tri_index].vertices
-        verts = self.mesh.vertices
-        return mathutils.geometry.barycentric_transform(p, verts[tri[0]].co, verts[tri[1]].co, verts[tri[2]].co,
-                                                        b0, b1, b2)
+    def _build_numpy_tris(self):
+        num_tris = len(self.mesh.loop_triangles)
+        self.triangles = np.empty((num_tris, 3), np.uintc)
+        self.mesh.loop_triangles.foreach_get("loops", np.reshape(self.triangles, 3*num_tris))
 
-    def build_poly_maps(self):
-        """ Builds 2 maps, that allow mapping from triangles to polygons and
-            vice versa. """
-        self.poly_to_tri = [None]*len(self.mesh.polygons)
-        self.tri_to_poly = [None]*len(self.mesh.loop_triangles)
-        for tri in self.mesh.loop_triangles:
-            self.tri_to_poly[tri.index] = tri.polygon_index
-            if self.poly_to_tri[tri.polygon_index] is not None:
-                self.poly_to_tri[tri.polygon_index].append(tri.index)
-            else:
-                self.poly_to_tri[tri.polygon_index] = [tri.index]
-
-    def edgeStart(self, edgeId):
-        return self.mesh.loop_triangles[edgeId//3].vertices[edgeId % 3]
-
-    def edgeEnd(self, edgeId):
-        return self.mesh.loop_triangles[edgeId//3].vertices[(edgeId+1) % 3]
+    def _build_bvh(self):
+        points = np.empty((len(self.mesh.vertices), 3), dtype=np.single)
+        self.mesh.vertices.foreach_get("co", np.reshape(points, len(self.mesh.vertices)*3))
+        triangles = np.empty(len(self.mesh.loop_triangles)*3, dtype=np.uintc)
+        self.mesh.loop_triangles.foreach_get("vertices", triangles)
+        normals = np.empty(len(self.mesh.loop_triangles)*9, dtype=np.single)
+        self.mesh.loop_triangles.foreach_get("split_normals", normals)
+        self.bvh = bvh.build_bvh(points, triangles, normals)

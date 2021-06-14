@@ -82,7 +82,7 @@ class PaintOperator(bpy.types.Operator):
             self.lastcall = currenttime
             if self._left_mouse_pressed:
                 self._particles.shoot(context, event, delta_t, settings)
-            self._particles.move_particles(settings.physics, delta_t)
+            self._particles.move_particles(delta_t, settings)
             self._particles.paint_particles(delta_t)
             if not settings.stop_painting_on_mouse_release and not self._left_mouse_pressed:
                 if self._particles.numParticles() == 0:

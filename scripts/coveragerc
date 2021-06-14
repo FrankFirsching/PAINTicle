@@ -1,12 +1,13 @@
 # .coveragerc to control coverage.py
 [run]
+
+# We need to specify the whole test_results directory for coverage, since the local_addon folder doesn't exist
+# yet at starting time. Thus pycoverage wouldn't count there, if we specified local_addon. As a workaround, we
+# cover the whole tests_results directory, including blender's own python sources and omit them afterwards.
+source =
+    .
 omit =
-    # omit anything in a .local directory anywhere
-    */.local/*
-    # and everything from the blender cache
-     blender_cache/*
-    # and the tests themselves
-    */tests/*
+    blender_cache/*
 
 [report]
 sort = Cover

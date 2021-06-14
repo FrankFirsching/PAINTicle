@@ -15,15 +15,10 @@
 
 # <pep8 compliant>
 
+from bpy.props import IntProperty
 from bpy.props import FloatProperty
 from bpy.props import FloatVectorProperty
 from bpy.types import PropertyGroup
-
-import mathutils
-
-
-def onUpdatePhysicsGravity(self, context):
-    self.gravityNormalized = mathutils.Vector(self.gravity).normalized()
 
 
 class Physics(PropertyGroup):
@@ -31,9 +26,9 @@ class Physics(PropertyGroup):
 
     gravity: FloatVectorProperty(name="Gravity",
                                  description="The gravitational force applied to the particles.",
-                                 default=(0, 0, -9.81), options=set(),
+                                 default=(0, 0, -9.81),
                                  subtype="ACCELERATION", unit="ACCELERATION",
-                                 update=onUpdatePhysicsGravity)
+                                 options=set())
 
     friction_coefficient: FloatProperty(name="Friction",
                                         description="The friction coefficient (how sticky is the surface).",
@@ -50,8 +45,3 @@ class Physics(PropertyGroup):
     max_time_step: FloatProperty(name="Max. timestep",
                                  description="The maximum time step used for the simulation.",
                                  default=0.04, options=set())
-
-    gravityNormalized: FloatVectorProperty(name="Gravity (normalized)",
-                                           description="The normalized gravitational force applied to the particles.",
-                                           default=(0, 0, -1), options=set(['HIDDEN']),
-                                           subtype="ACCELERATION", unit="ACCELERATION")

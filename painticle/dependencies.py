@@ -17,7 +17,7 @@
 
 import importlib
 import os
-import pkg_resources
+import re
 import sys
 import site
 import subprocess
@@ -85,7 +85,7 @@ def _ensure_local_site_packages():
 
 def _install_requirement(requirement):
     """ Install a python module through pip """
-    completed_process = subprocess.run([sys.executable, "-m", "pip", "install", str(requirement), "--user"])
+    completed_process = subprocess.run([sys.executable, "-m", "pip", "install", requirement.full, "--user"])
     return completed_process.returncode == 0
 
 
@@ -115,10 +115,18 @@ def draw_property(panel, name):
     row.prop(panel, name, toggle=1)
 
 
+class Requirement:
+    name_regex = re.compile("^([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9])*")
+    def __init__(self, line):
+        m = Requirement.name_regex.match(line)
+        if m is not None:
+            self.name = m[0]
+        self.full = line
+
 if _dependencies is None:
     dependencies_file = os.path.join(os.path.dirname(__file__), "dependencies.txt")
     with open(dependencies_file) as f:
         lines = f.readlines()
-        deps = [pkg_resources.Requirement(line) for line in lines if line.rstrip() != '']
+        deps = [Requirement(line) for line in lines if line.rstrip() != '']
         _setup(deps)
         install_all()

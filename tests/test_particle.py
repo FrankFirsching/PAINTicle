@@ -25,7 +25,7 @@ import sys
 from painticle import particle
 from painticle import trianglemesh
 
-import tstutils
+from . import tstutils
 
 
 @pytest.fixture
@@ -46,14 +46,12 @@ def test_particle(test_mesh):
     context = tstutils.get_default_context(test_mesh)
     paint_mesh = trianglemesh.TriangleMesh(context)
 
-    p = particle.Particle(loc, tri_index, color, paint_mesh, particle_settings)
+    p = particle.Particle(loc, color, paint_mesh, particle_settings)
     assert p
     min_tol = 0.000001
     assert tstutils.is_close_vec(p.location, loc, min_tol)
-    assert p.tri_index == tri_index
     assert p.acceleration == null_vec3
     assert p.speed == null_vec3
-    assert p.barycentric == mathutils.Vector((0.6, 0.25, 0.15))
     assert p.normal == z_axis
     assert p.uv == mathutils.Vector((0.725, 0.5375))
     assert tstutils.is_close(p.particle_size, particle_settings.particle_size, particle_settings.particle_size_random)
@@ -65,5 +63,5 @@ def test_particle(test_mesh):
     assert tstutils.is_close(p.color.s, color.s, max(particle_settings.color_random.s, min_tol))
     assert tstutils.is_close(p.color.v, color.v, max(particle_settings.color_random.v, min_tol))
 
-    p_next = particle.Particle(loc, tri_index, color, None, particle_settings)
+    p_next = particle.Particle(loc, color, None, particle_settings)
     assert p.id != p_next.id

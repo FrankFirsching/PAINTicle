@@ -28,13 +28,15 @@ parser.add_argument('--dbg', help="When debugging don't capture at all",
                     action='store_true')
 parser.add_argument('--ui', help="Allow some UI related tests, by not running blender in -b mode",
                     action='store_true')
+parser.add_argument('--test', help="Specify a single test to run", default="")
 parser.add_argument('--rev', help="Specify the blender revision for the test environment (default=2.92)",
                     default="2.92")
 args = parser.parse_args()
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 tests_results_path = os.path.join(script_dir, "..", "tests_results")
-addon_path = os.path.join(script_dir, "..", "painticle")
+tests_path = os.path.join(script_dir, "..", "tests") if args.test == "" else os.path.abspath(args.test)
+addon_path = os.path.join(script_dir, "..", "build", "out", "painticle")
 
 os.chdir(tests_results_path)
 
@@ -43,8 +45,12 @@ os.chdir(tests_results_path)
 if 'BLENDER_CACHE' not in os.environ:
     os.environ['BLENDER_CACHE'] = os.path.join(tests_results_path, "blender_cache")
 
+# Setup a local config and script installation environment to not pollute the user's one
+os.environ['BLENDER_USER_CONFIG'] = os.path.join(os.environ['BLENDER_CACHE'], "local_config_"+args.rev)
+
 config = {
-    "run_in_window": args.ui
+    "run_in_window": args.ui,
+    "tests": tests_path
 }
 
 if args.cov:

@@ -24,14 +24,14 @@ from painticle import particle
 from painticle import particle_painter_gpu
 from painticle import settings
 
-import tstutils
-from tstutils import default_scene
+from . import tstutils
+from .tstutils import default_scene
 
 
 @pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
 def test_particle_visual_attribs(default_scene):
     particle_settings = bpy.context.scene.painticle_settings
-    p = particle.Particle(mathutils.Vector(), 0, mathutils.Color((0.3, 0.4, 0.5)), None, particle_settings)
+    p = particle.Particle(mathutils.Vector(), mathutils.Color((0.3, 0.4, 0.5)), None, particle_settings)
     assert p
     visual_attribs = []
     painter = particle_painter_gpu.ParticlePainterGPU(tstutils.get_default_context())

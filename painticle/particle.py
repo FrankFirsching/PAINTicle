@@ -33,14 +33,12 @@ class Particle:
     rnd = random.Random()
 
     """ A single particle """
-    def __init__(self, location, tri_index, color, paint_mesh, particle_settings):
+    def __init__(self, location, color, paint_mesh, particle_settings):
         self.id = Particle._next_particle_id
         Particle._next_particle_id += 1
-        self.location = location
-        self.tri_index = tri_index
+        self.location = mathutils.Vector(location)
         self.acceleration = mathutils.Vector((0, 0, 0))
         self.speed = mathutils.Vector((0, 0, 0))
-        self.barycentric = mathutils.Vector((0, 0, 0))
         self.normal = mathutils.Vector((0, 0, 0))
         self.uv = mathutils.Vector((0, 0))
 
@@ -84,22 +82,13 @@ class Particle:
         self.update_location_dependent_properties(paint_mesh)
 
     def update_location_dependent_properties(self, paint_mesh):
-        self.project_back_to_triangle(paint_mesh)
-        bary = paint_mesh.barycentrics(self.location, self.tri_index)
-        self.barycentric = bary
-
-        if bary[0] > 0 and bary[1] > 0 and bary[2] > 0:
-            # If we're within the triangle...
-            mesh = paint_mesh.mesh
-            tri = mesh.loop_triangles[self.tri_index]
-            uvMap = mesh.uv_layers.active.data
-            # Fully unrolled uv interpolation, due to performance reasons
-            self.uv = uvMap[tri.loops[0]].uv*bary[0] + uvMap[tri.loops[1]].uv*bary[1] + uvMap[tri.loops[2]].uv*bary[2]
-
-    def project_back_to_triangle(self, paint_mesh):
         # Put the particle back to the triangle surface
-        location, normal, index, distance = paint_mesh.bvh.find_nearest(self.location)
-        if location is not None:
-            self.location = location
-            self.normal = normal
-            self.tri_index = paint_mesh.triangle_for_point_on_poly(location, index)
+        p = self.location
+        surface_info = paint_mesh.bvh.closest_point(p[0], p[1], p[2])
+        if surface_info.tri_index != -1:
+            self.location = mathutils.Vector(surface_info.location)
+            self.normal = mathutils.Vector(surface_info.normal)
+            tri = paint_mesh.mesh.loop_triangles[surface_info.tri_index]
+            uvMap = paint_mesh.mesh.uv_layers.active.data
+            self.uv = utils.apply_barycentrics(surface_info.barycentrics, uvMap[tri.loops[0]].uv,
+                                               uvMap[tri.loops[1]].uv, uvMap[tri.loops[2]].uv)

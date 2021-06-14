@@ -17,6 +17,7 @@
 
 # <pep8 compliant>
 
+from painticle import numpyutils
 from . import particle_painter
 from . import gpu_utils
 from . import dependencies
@@ -211,12 +212,19 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             self.undoimage = None
             self.context.window.cursor_modal_restore()
 
-    def update_vertex_buffer(self, particles: typing.Iterable[particle.Particle]):
-        coords = array.array("f")
-        for p in particles:
-            self.append_visual_properties(coords, p)
-        # We can't resize down to 0, so we use 1 byte length as indication of zero particles
-        self.update_vbo(self.vertex_buffer, coords)
+    def update_vertex_buffer(self, particles):
+        if isinstance(particles, list):
+            coords = array.array("f")
+            for p in particles:
+                self.append_visual_properties(coords, p)
+            # We can't resize down to 0, so we use 1 byte length as indication of zero particles
+            self.update_vbo(self.vertex_buffer, coords)
+        elif isinstance(particles, np.ndarray):
+            p = numpyutils.UnstructuredHolder(particles)
+            coords = np.column_stack((p.location, p.uv, p.size, p.age, p.max_age, p.color))
+            self.update_vbo(self.vertex_buffer, coords)
+        else:
+            raise Error("Unknown particle type "+type(particles))
 
     def append_visual_properties(self, vbo_data: array.array, p):
         """ Append the particle's visual properties to the vbo data array. """
@@ -298,7 +306,11 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
 
         # not working: self.context.area.tag_redraw()
         self.roll_factor = -1 if self.roll_factor > 0 else 1
-        bpy.ops.view3d.view_roll(angle=0.000005*self.roll_factor)
+        override = {
+            'area': self.context.area,
+            'region': self.context.region,
+        }
+        bpy.ops.view3d.view_roll(override, angle=0.000005*self.roll_factor)
 
     def build_mesh_vbo(self, mesh: bpy.types.Mesh):
         if self.mesh_buffers is None:
