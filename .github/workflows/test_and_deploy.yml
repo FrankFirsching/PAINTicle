@@ -54,6 +54,20 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: true
+      # Setup the msys windows bash (git-bash doesn't have rsync and zip)
+      - name: Setup and install msys2 packages
+        uses: msys2/setup-msys2@v2
+        if: startsWith(matrix.os, 'windows')
+        with:
+          release: false
+          install: |
+            rsync
+            zip
+      # Swtich default bash to msys
+      - name: switch git-bash shell to msys2 shell by adding msys2 path to PATH front
+        if: startsWith(matrix.os, 'windows')
+        run: echo "C:\msys64\usr\bin" >> $GITHUB_PATH
+        shell: bash
       # Setup Python 3.9
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
@@ -87,7 +101,7 @@ jobs:
           python scripts/test_addon.py --cov --rev ${{ matrix.blender-version }}
       # On Windows only run the non-UI tests (hangs otherwise)
       - name: Test Blender ${{ matrix.blender-version }} with pytest (non Linux version)
-        if: ${{ ! startsWith(matrix.os, 'ubuntu') }}
+        if: startsWith(matrix.os, 'windows')
         env:
           BLENDER_ADDON_TESTER_NO_DIR_CLEANUP: 1
         run: |
@@ -97,12 +111,12 @@ jobs:
         shell: bash
         run: |
           scripts/deploy.sh -s build/out/painticle -t PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
-      # Pull requests store artifacts
+      # Pull requests and non-main branches store artifacts
       - name: Archive production artifacts
         if: ${{ github.event_name == 'pull_request' || (!startswith(github.ref, 'refs/heads/main') && !startswith(github.ref, 'refs/tags')) }}
         uses: actions/upload-artifact@v2
         with:
-          name: built-addon
+          name: PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
           path: |
             PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
       # Pushes deploy to development build
