@@ -17,7 +17,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # Test the add-on
-  build_test_and_deploy:
+  build_and_test:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
     strategy:
@@ -113,12 +113,18 @@ jobs:
           scripts/deploy.sh -s build/out/painticle -t PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
       # Pull requests and non-main branches store artifacts
       - name: Archive production artifacts
-        if: ${{ github.event_name == 'pull_request' || (!startswith(github.ref, 'refs/heads/main') && !startswith(github.ref, 'refs/tags')) }}
         uses: actions/upload-artifact@v2
         with:
-          name: PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
+          name: painticle_artifacts
           path: |
             PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
+  # Deploy the add-on
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    steps:
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v2
       # Pushes deploy to development build
       - name: "Development Build release"
         uses: "marvinpinto/action-automatic-releases@latest"
@@ -128,8 +134,7 @@ jobs:
           automatic_release_tag: "latest"
           prerelease: true
           title: "Development Build"
-          files: |
-            PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
+          files: painticle_artifacts/*.zip
       # Tags deploy to named release
       - name: "Tagged release"
         uses: "marvinpinto/action-automatic-releases@latest"
@@ -137,5 +142,4 @@ jobs:
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
-          files: |
-            PAINTicle-${{matrix.os_tag}}-${{matrix.blender-version}}.zip
+          files: painticle_artifacts/*.zip
