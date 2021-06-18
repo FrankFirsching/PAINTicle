@@ -62,18 +62,19 @@ class SimulationStep(ABC):
 
 class GravityStep(SimulationStep):
     def simulate(self, sim_data: particle_simulator.SimulationData, particles: ParticleData, forces, locations):
-        # logic of before
         physics = sim_data.settings.physics
         gravity = physics.gravity
         # Calculation
+        # Project gravity onto normal vector
+        # We don't need to divide by the square length of normal, since this is a normalized vector.
         factor = particles.normal.dot(gravity)
         ortho_force = particles.normal * factor[:, np.newaxis]
+        # The force on the plane is then just simple vector subtraction
         plane_force = np.array(gravity)[np.newaxis, :] - ortho_force
-        friction_force = ortho_force*physics.friction_coefficient
-        applied_force = plane_force - friction_force
-        forces += applied_force
-
-
+        # factor is the inverse of what we need here, since the normal is pointing to the outside of the surface,
+        # but friction only applies if force is applied towards the surface. Hence we use (1+x) instead of (1-x)
+        friction = np.clip(1+physics.friction_coefficient*factor/numpyutils.vec_length(plane_force), 0, 1)
+        forces += plane_force * friction[:, np.newaxis]
 
 
 class DragForce (SimulationStep):

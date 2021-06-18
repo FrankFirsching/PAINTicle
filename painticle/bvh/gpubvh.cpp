@@ -178,6 +178,7 @@ BVH::SurfaceInfo BVH::closestPoint(float x, float y, float z) const
         Vec3f n1 = normal(userData.primID, 1);
         Vec3f n2 = normal(userData.primID, 2);
         n = applyBarycentics(userData.barycentrics, n0, n1, n2);
+        n.normalize();
     }
     return { userData.p, n, userData.primID, userData.barycentrics };
 }
@@ -215,6 +216,7 @@ BVH::SurfaceInfo BVH::shootRay(const Vec3f& origin, const Vec3f& direction) cons
         Vec3f n1 = normal(tri_id, 1);
         Vec3f n2 = normal(tri_id, 2);
         n = applyBarycentics(barycentrics, n0, n1, n2);
+        n.normalize();
     }
     return { p, n, tri_id, barycentrics };
 }

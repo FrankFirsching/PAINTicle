@@ -19,11 +19,22 @@
 
 import numpy as np
 
+import math
+
 from painticle import bvh
 
 from . import tstutils
 
 min_tol = 0.000001
+
+
+def length(vector):
+    return math.sqrt(sum([x*x for x in vector]))
+
+
+def normalize(vector):
+    l = length(vector)
+    return [x/l for x in vector]
 
 
 def test_bvh_closest_point():
@@ -79,7 +90,8 @@ def test_bvh_normal_interpolation():
     assert surface_info.tri_index == 1
     assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
     assert tstutils.is_close_vec(surface_info.location, [0.1, 0.7, 0], min_tol)
-    assert tstutils.is_close_vec(surface_info.normal, [5.15, 6.15, 0.0], min_tol)
+    check_normal = normalize([5.15, 6.15, 0.0])
+    assert tstutils.is_close_vec(surface_info.normal, check_normal, min_tol)
 
 
 def test_bvh_intersection():
@@ -100,4 +112,5 @@ def test_bvh_intersection():
     assert surface_info.tri_index == 1
     assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
     assert tstutils.is_close_vec(surface_info.location, [0.1, 0.7, 0], min_tol)
-    assert tstutils.is_close_vec(surface_info.normal, [5.15, 6.15, 0.0], min_tol)
+    check_normal = normalize([5.15, 6.15, 0.0])
+    assert tstutils.is_close_vec(surface_info.normal, check_normal, min_tol)

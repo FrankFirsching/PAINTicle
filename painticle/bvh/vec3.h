@@ -57,6 +57,14 @@ public:
     inline T sqrLength() const
     { return this->dot(*this); }
 
+    inline void normalize()
+    {
+        T factor = T(1) / this->length();
+        x *= factor;
+        y *= factor;
+        z *= factor;
+    }
+
     inline T& operator[](std::size_t idx)
     { return (&x)[idx]; }
 
