@@ -47,6 +47,12 @@ if 'BLENDER_CACHE' not in os.environ:
 
 # Setup a local config and script installation environment to not pollute the user's one
 os.environ['BLENDER_USER_CONFIG'] = os.path.join(os.environ['BLENDER_CACHE'], "local_config_"+args.rev)
+if not os.path.exists(os.environ['BLENDER_USER_CONFIG']):
+    os.makedirs(os.environ['BLENDER_USER_CONFIG'])
+
+os.environ['BLENDER_USER_SCRIPTS'] = os.path.join(os.environ['BLENDER_CACHE'], "local_scripts_"+args.rev)
+if not os.path.exists(os.environ['BLENDER_USER_SCRIPTS']):
+    os.makedirs(os.environ['BLENDER_USER_SCRIPTS'])
 
 config = {
     "run_in_window": args.ui,
