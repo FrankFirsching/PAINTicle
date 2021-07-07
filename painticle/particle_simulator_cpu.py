@@ -20,24 +20,23 @@
 
 from abc import ABC
 from abc import abstractmethod
-from painticle import trianglemesh
 
 from . import particle_simulator
+from . import utils
 from . import numpyutils
+from . import accel
 
 import bpy
-import mathutils
 import numpy as np
 
 import random
 import time
 
 
-float32_dtype = np.single
-float64_dtype = np.double
-vec2_dtype = np.dtype([('x', float32_dtype), ('y', float32_dtype)], align=True)
-vec3_dtype = np.dtype([('x', float32_dtype), ('y', float32_dtype), ('z', float32_dtype)], align=True)
-col_dtype = np.dtype([('r', float32_dtype), ('g', float32_dtype), ('b', float32_dtype)], align=True)
+from painticle import trianglemesh
+from .numpyutils import float32_dtype, float64_dtype, vec2_dtype, vec3_dtype, col_dtype
+
+# This type needs to be conform to the definition of ParticleData in accel/particledata.h
 particle_dtype = np.dtype([('location', vec3_dtype),
                            ('acceleration', vec3_dtype),
                            ('speed', vec3_dtype),
@@ -51,24 +50,22 @@ particle_dtype = np.dtype([('location', vec3_dtype),
                           align=True)
 
 
-ParticleData = numpyutils.UnstructuredHolder
-
-
 class SimulationStep(ABC):
     @abstractmethod
-    def simulate(self, sim_data: particle_simulator.SimulationData, particles: ParticleData, forces, locations):
+    def simulate(self, sim_data: particle_simulator.SimulationData, particles: accel.ParticleData, forces, locations):
         pass
 
 
 class GravityStep(SimulationStep):
-    def simulate(self, sim_data: particle_simulator.SimulationData, particles: ParticleData, forces, locations):
+    def simulate(self, sim_data: particle_simulator.SimulationData, particles: accel.ParticleData, forces, locations):
         physics = sim_data.settings.physics
         gravity = physics.gravity
         # Calculation
         # Project gravity onto normal vector
         # We don't need to divide by the square length of normal, since this is a normalized vector.
-        factor = particles.normal.dot(gravity)
-        ortho_force = particles.normal * factor[:, np.newaxis]
+        unormal = numpyutils.unstructured(particles.normal)
+        factor = unormal.dot(gravity)
+        ortho_force = unormal * factor[:, np.newaxis]
         # The force on the plane is then just simple vector subtraction
         plane_force = np.array(gravity)[np.newaxis, :] - ortho_force
         # factor is the inverse of what we need here, since the normal is pointing to the outside of the surface,
@@ -78,39 +75,42 @@ class GravityStep(SimulationStep):
 
 
 class DragForce (SimulationStep):
-    def simulate(self, sim_data: particle_simulator.SimulationData, particles: ParticleData, forces, locations):
+    def simulate(self, sim_data: particle_simulator.SimulationData, particles: accel.ParticleData, forces, locations):
         pass
 
 
 class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
     """ This particle simulator is using the CPU to simulate the particles. """
-    rnd = random.Random()
-
+    
     def __init__(self, context: bpy.types.Context):
         super().__init__(context)
-        self._particles = np.empty(0, dtype=particle_dtype)
+        self._particles = accel.ParticleData()
         self._physics_steps = [GravityStep()]
 
     def shutdown(self):
         pass
 
     def add_particles(self, particles):
-        self._particles = np.append(self._particles, particles)
+        self._particles.append(particles)
+
+    @property
+    def num_particles(self):
+        return self._particles.num_particles
 
     def set_num_particles(self, num_particles):
-        self._particles.resize(num_particles, refcheck=False)
+        self._particles.resize(num_particles)
 
     def set_particle(self, i, particle):
         self._particles[i] = particle
 
     def clear_particles(self):
-        self._particles = np.empty(0, dtype=particle_dtype)
+        self._particles.resize(0)
 
     def simulate(self, sim_data: particle_simulator.SimulationData):
         # Data initialization
         # -------------------
-        p = ParticleData(self._particles)
-        forces = np.zeros((self._particles.size, 3), float32_dtype)
+        p = self._particles
+        forces = np.zeros((self.num_particles, 3), float32_dtype)
         locations = np.copy(p.location)
         # Apply simulation steps
         # ----------------------
@@ -118,23 +118,25 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
             step.simulate(sim_data, p, forces, locations)
         # Improved Euler (midpoint) integration step
         # ------------------------------------------
+        ulocation = numpyutils.unstructured(p.location)
+        uspeed = numpyutils.unstructured(p.speed)
+        uacceleration = numpyutils.unstructured(p.acceleration)
         new_acceleration = forces / p.mass[:,np.newaxis]
         half_timestep = 0.5 * sim_data.timestep
-        new_speed = p.speed + half_timestep * (p.acceleration + new_acceleration)
-        new_location = p.location + half_timestep * (p.speed + new_speed)
+        new_speed = uspeed + half_timestep * (uacceleration + new_acceleration)
+        new_location = ulocation + half_timestep * (uspeed + new_speed)
         # Last step assign the new computed values
-        self._particles['acceleration'] = numpyutils.to_structured(new_acceleration, vec3_dtype)
-        self._particles['speed'] = numpyutils.to_structured(new_speed, vec3_dtype)
-        self._particles['location'] = numpyutils.to_structured(new_location, vec3_dtype)
-        self._particles['age'] += sim_data.timestep
+        p.acceleration = numpyutils.to_structured(new_acceleration, vec3_dtype)
+        p.speed = numpyutils.to_structured(new_speed, vec3_dtype)
+        p.location = numpyutils.to_structured(new_location, vec3_dtype)
+        p.age += sim_data.timestep
         self._update_location_dependent_variables(sim_data.paint_mesh)
-        self.del_dead_particles()
+        self._particles.del_dead()
 
     def _update_location_dependent_variables(self, paint_mesh: trianglemesh.TriangleMesh):
-        loc = self._particles['location']
-        result = paint_mesh.bvh.closest_points(numpyutils.unstructured(loc))
-        self._particles['location'] = result['location']
-        self._particles['normal'] = result['normal']
+        result = paint_mesh.bvh.closest_points(self._particles.location)
+        self._particles.location = result['location']
+        self._particles.normal = result['normal']
 
         barycentrics = numpyutils.unstructured(result['barycentrics'])
         tri_index = result['tri_index']
@@ -142,39 +144,28 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         result_vertex_ids = np.take(paint_mesh.triangles, tri_index, axis=0)
         tri_uv = np.take(active_uvs, result_vertex_ids, axis=0)
         weighted_uvs = barycentrics[..., np.newaxis]*tri_uv
-        self._particles['uv'] = numpyutils.to_structured(np.sum(weighted_uvs, axis=1), vec2_dtype)
+        self._particles.uv = numpyutils.to_structured(np.sum(weighted_uvs, axis=1), vec2_dtype)
+        
+    def create_uninitialized_particles(self, num_particles):
+        particles = accel.ParticleData()
+        particles.resize(num_particles)
+        return particles
 
-    def del_dead_particles(self):
-        alive_ones = self._particles['age'] <= self._particles['max_age']
-        self._particles = self._particles[alive_ones, ...]
-
-    @property
-    def num_particles(self):
-        return self._particles.size
-
-    def create_particle(self, location, brush_color, speed, painticle_settings):
-        p = np.zeros(1, particle_dtype)
-        p['location'] = location
-        p['speed'] = speed
-
-        rnd = ParticleSimulatorCPU.rnd
-        random_size = rnd.uniform(-painticle_settings.particle_size_random,
-                                  painticle_settings.particle_size_random)
-        p['size'] = painticle_settings.particle_size+random_size
-
-        random_mass = rnd.uniform(-painticle_settings.mass_random,
-                                  painticle_settings.mass_random)
-        p['mass'] = painticle_settings.mass + random_mass
-
-        p['age'] = 0.0
-        random_age = rnd.uniform(-painticle_settings.max_age_random,
-                                 painticle_settings.max_age_random)
-        p['max_age'] = painticle_settings.max_age + random_age
-
-        col_rand = painticle_settings.color_random
-        color = mathutils.Color(brush_color)
-        color.h += rnd.uniform(-col_rand.h, col_rand.h)
-        color.s += rnd.uniform(-col_rand.s, col_rand.s)
-        color.v += rnd.uniform(-col_rand.v, col_rand.v)
-        p['color'] = (color.r, color.g, color.b)
-        return p
+    def add_particles_from_rays(self, ray_origins, ray_directions, bvh, object_transform, brush_color,
+                                   painticle_settings):
+        """ ray_origins and ray_directions need to be given in world space """
+        matrix_inv = utils.matrix_to_tuple(object_transform.inverted())
+        physics = painticle_settings.physics
+        speed = physics.initial_speed
+        speed_random = 0.5 * physics.initial_speed * physics.initial_speed_random
+        size_min = painticle_settings.particle_size - painticle_settings.particle_size_random
+        size_max = painticle_settings.particle_size + painticle_settings.particle_size_random
+        mass_min = painticle_settings.mass - painticle_settings.mass_random
+        mass_max = painticle_settings.mass + painticle_settings.mass_random
+        max_age_min = painticle_settings.max_age - painticle_settings.max_age_random
+        max_age_max = painticle_settings.max_age + painticle_settings.max_age_random
+        return self._particles.add_particles_from_rays(ray_origins, ray_directions, matrix_inv, bvh,
+                                                       [speed, speed], [speed_random, speed_random, speed_random],
+                                                       [size_min, size_max], [mass_min, mass_max],
+                                                       [max_age_min, max_age_max],
+                                                       brush_color[:], painticle_settings.color_random.hsv)

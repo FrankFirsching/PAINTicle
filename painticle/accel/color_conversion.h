@@ -15,7 +15,18 @@
 
 #pragma once
 
-#define BEGIN_PAINTICLE_NAMESPACE namespace painticle {
-#define END_PAINTICLE_NAMESPACE }
+#include "vec3.h"
+#include "memview.h"
 
-typedef unsigned char Byte;
+BEGIN_PAINTICLE_NAMESPACE
+
+Vec3f rgb2hsv(const Vec3f& rgb);
+void rgb2hsv(MemView<Vec3f> rgb, MemView<Vec3f> results);
+
+Vec3f hsv2rgb(const Vec3f& hsv);
+void hsv2rgb(MemView<Vec3f> hsv, MemView<Vec3f> results);
+
+Vec3f applyHsvOffset(const Vec3f& rgb, const Vec3f& hsvOffset);
+void applyHsvOffset(MemView<Vec3f> rgb, MemView<Vec3f> hsvOffsets,  MemView<Vec3f> results);
+
+END_PAINTICLE_NAMESPACE

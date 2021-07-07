@@ -22,7 +22,7 @@ import mathutils
 import numpy as np
 
 from .utils import Error
-from . import bvh
+from . import accel
 
 
 class TriangleMesh:
@@ -64,4 +64,4 @@ class TriangleMesh:
         self.mesh.loop_triangles.foreach_get("vertices", triangles)
         normals = np.empty(len(self.mesh.loop_triangles)*9, dtype=np.single)
         self.mesh.loop_triangles.foreach_get("split_normals", normals)
-        self.bvh = bvh.build_bvh(points, triangles, normals)
+        self.bvh = accel.build_bvh(points, triangles, normals)

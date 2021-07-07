@@ -24,6 +24,8 @@
 
 #include "painticle.h"
 #include "vec3.h"
+#include "mat4.h"
+#include "memview.h"
 
 BEGIN_PAINTICLE_NAMESPACE
 
@@ -60,13 +62,22 @@ public:
     //! Destructor
     ~BVH();
 
-    //! Compute the closes point on the mesh for given point p
+    //! Compute the closest point on the mesh for given point p
     /**! @returns location, normal, tri_index, barycentrics */
     SurfaceInfo closestPoint(float x, float y, float z) const;
+
+    //! Compute the closest points on the mesh for a set of given points p
+    /**! @param results array of location, normal, tri_index, barycentrics */
+    void closestPoints(MemView<Vec3f> points, MemView<SurfaceInfo> results) const;
 
     //! Shoot a ray and return the intersection
     /**! @returns location, normal, tri_index, barycentrics */
     SurfaceInfo shootRay(const Vec3f& origin, const Vec3f& direction) const;
+
+    //! Shoot a ray and return the intersection
+    /**! @param results location, normal, tri_index, barycentrics */
+    void shootRays(MemView<Vec3f> origins, MemView<Vec3f> directions, const Mat4f& toObjectTransform,
+                   MemView<SurfaceInfo> results) const;
 
     //! Get the coordinates of a corner of a triangle
     inline Vec3f point(const ID& primId, const ID& corner) const;

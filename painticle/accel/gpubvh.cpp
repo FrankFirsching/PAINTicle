@@ -20,6 +20,7 @@
 #include <iterator>
 #include <limits>
 
+#include "parallel.h"
 #include "vec3.h"
 
 BEGIN_PAINTICLE_NAMESPACE
@@ -183,6 +184,16 @@ BVH::SurfaceInfo BVH::closestPoint(float x, float y, float z) const
     return { userData.p, n, userData.primID, userData.barycentrics };
 }
 
+void BVH::closestPoints(MemView<Vec3f> points, MemView<SurfaceInfo> results) const
+{
+    if(points.size() != results.size())
+        throw std::runtime_error("points and results need to have same size");
+    
+    BEGIN_PARALLEL_FOR(i, points.size()) {
+        const Vec3f& point = points[i];
+        results[i] = closestPoint(point.x, point.y, point.z);
+    } END_PARALLEL_FOR
+}
 
 BVH::SurfaceInfo BVH::shootRay(const Vec3f& origin, const Vec3f& direction) const
 {
@@ -219,6 +230,23 @@ BVH::SurfaceInfo BVH::shootRay(const Vec3f& origin, const Vec3f& direction) cons
         n.normalize();
     }
     return { p, n, tri_id, barycentrics };
+}
+
+void BVH::shootRays(MemView<Vec3f> origins, MemView<Vec3f> directions, const Mat4f& toObjectTransform,
+                    MemView<SurfaceInfo> results) const
+{
+    if(origins.size() != directions.size())
+        throw std::runtime_error("Origins and directions need to be of equal size");
+    if(origins.size() != results.size())
+        throw std::runtime_error("Origins and results need to be of equal size");
+
+    BEGIN_PARALLEL_FOR(i, origins.size()) {
+        const Vec3f& origin = origins[i];
+        const Vec3f& direction = directions[i];
+        Vec3f local_origin = toObjectTransform.multAffineMatPoint(origin);
+        Vec3f local_direction = toObjectTransform.multAffineMatPoint(direction);
+        results[i] = shootRay(local_origin, local_direction);
+    } END_PARALLEL_FOR
 }
 
 END_PAINTICLE_NAMESPACE

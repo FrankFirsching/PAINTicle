@@ -67,14 +67,14 @@ def setup_package():
     elif platform.system() == 'Linux':
         macros = [("_GLIBCXX_USE_CXX11_ABI", 0)]
 
-    native_module = Extension('painticle.bvh',
+    native_module = Extension('painticle.accel',
                               define_macros=macros,
                               undef_macros=undef_macros,
                               include_dirs=include_dirs,
                               library_dirs=library_dirs,
-                              libraries=libraries+libraries,
-                              sources=glob.glob('painticle/bvh/*.cpp'),
-                              depends=glob.glob('painticle/bvh/*.h'))
+                              libraries=libraries,
+                              sources=glob.glob('painticle/accel/*.cpp'),
+                              depends=glob.glob('painticle/accel/*.h'))
 
     setup(name='painticle',
           version=get_addon_version(),
@@ -85,7 +85,7 @@ def setup_package():
             "painticle": ["shaders/*.glsl", "dependencies.txt"]
           },
           exclude_package_data={
-              "painticle": ["bvh/*"]
+              "painticle": ["accel/*"]
           },
           include_package_data=True)
 

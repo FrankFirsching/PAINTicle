@@ -53,30 +53,19 @@ def sim_and_paint(setup_info):
 @pytest.fixture
 def sim_setup():
     tstutils.open_file("benchmark_particles.blend")
-    def _method(use_simulator):
-        bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
-        test_mesh = bpy.data.objects['test_object']
-        context = tstutils.get_default_context(test_mesh)
-        painticle_settings = bpy.context.scene.painticle_settings
-        particles = painticle.particles.Particles(context, omit_painter=tstutils.no_ui(), use_simulator=use_simulator)
-        return SetupInfo(test_mesh, context, particles, 0.01, painticle_settings,
-                         tstutils.get_fake_event(x=context.region.width//2, y=context.region.height//2))
-    return _method
-
-
-def test_benchmark_no_painting_old(benchmark, sim_setup):
-    benchmark.pedantic(sim_only, args=(sim_setup(False),), rounds=1)
+    bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
+    test_mesh = bpy.data.objects['test_object']
+    context = tstutils.get_default_context(test_mesh)
+    painticle_settings = bpy.context.scene.painticle_settings
+    particles = painticle.particles.Particles(context, omit_painter=tstutils.no_ui())
+    return SetupInfo(test_mesh, context, particles, 0.01, painticle_settings,
+                     tstutils.get_fake_event(x=context.region.width//2, y=context.region.height//2))
 
 
 def test_benchmark_no_painting_sim(benchmark, sim_setup):
-    benchmark.pedantic(sim_only, args=(sim_setup(True),), rounds=1)
-
-
-@pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
-def test_benchmark_painting_old(benchmark, sim_setup):
-    benchmark.pedantic(sim_and_paint, args=(sim_setup(False),), rounds=1)
+    benchmark.pedantic(sim_only, args=(sim_setup,), rounds=1)
 
 
 @pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
 def test_benchmark_painting_sim(benchmark, sim_setup):
-    benchmark.pedantic(sim_and_paint, args=(sim_setup(True),), rounds=1)
+    benchmark.pedantic(sim_and_paint, args=(sim_setup,), rounds=1)

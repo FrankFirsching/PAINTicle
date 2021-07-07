@@ -21,7 +21,7 @@ import numpy as np
 
 import math
 
-from painticle import bvh
+from painticle import accel
 
 from . import tstutils
 
@@ -45,7 +45,7 @@ def test_bvh_closest_point():
     triangles = np.array([0, 1, 2,    0, 2, 3], dtype=np.uintc)
     normals = np.array([], dtype=np.single)
 
-    x = bvh.build_bvh(points, triangles, normals)
+    x = accel.build_bvh(points, triangles, normals)
     surface_info = x.closest_point(0.1, 0.7, 1)
     assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
     assert tstutils.is_close_vec(surface_info.location, [0.1, 0.7, 0], min_tol)
@@ -85,7 +85,7 @@ def test_bvh_normal_interpolation():
                         5, 6, 0,
                         6, 7, 0], dtype=np.single)
 
-    x = bvh.build_bvh(points, triangles, normals)
+    x = accel.build_bvh(points, triangles, normals)
     surface_info = x.closest_point(0.1, 0.7, 1)
     assert surface_info.tri_index == 1
     assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)
@@ -107,7 +107,7 @@ def test_bvh_intersection():
                         5, 6, 0,
                         6, 7, 0], dtype=np.single)
 
-    x = bvh.build_bvh(points, triangles, normals)
+    x = accel.build_bvh(points, triangles, normals)
     surface_info = x.shoot_ray([0.1, 0, 0.7], [0, 1, -1])
     assert surface_info.tri_index == 1
     assert tstutils.is_close_vec(surface_info.barycentrics, [0.15, 0.55, 0.3], min_tol)

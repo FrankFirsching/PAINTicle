@@ -21,19 +21,15 @@ from painticle import numpyutils
 from . import particle_painter
 from . import gpu_utils
 from . import dependencies
-from . import particle
+from . import accel
 from . import utils
 from . import preferences
 from .utils import Error
 
 import bpy
-import mathutils
 import bgl
 import numpy as np
 
-import array
-import struct
-import typing
 import moderngl
 
 
@@ -151,7 +147,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             preview mode. In preview mode sync to blender's image only if we reached 0 particles again after
             simulation is 'done'. """
 
-        num_particles = len(particles)
+        num_particles = particles.num_particles
         self.update_paintbuffer()
         self.update_vertex_buffer(particles)
         self.update_uniforms(time_step)
@@ -213,32 +209,17 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             self.context.window.cursor_modal_restore()
 
     def update_vertex_buffer(self, particles):
-        if isinstance(particles, list):
-            coords = array.array("f")
-            for p in particles:
-                self.append_visual_properties(coords, p)
-            # We can't resize down to 0, so we use 1 byte length as indication of zero particles
-            self.update_vbo(self.vertex_buffer, coords)
-        elif isinstance(particles, np.ndarray):
-            p = numpyutils.UnstructuredHolder(particles)
-            coords = np.column_stack((p.location, p.uv, p.size, p.age, p.max_age, p.color))
-            self.update_vbo(self.vertex_buffer, coords)
-        else:
-            raise Error("Unknown particle type "+type(particles))
-
-    def append_visual_properties(self, vbo_data: array.array, p):
-        """ Append the particle's visual properties to the vbo data array. """
-        # Also see vao_definition_particles, that provides the glsl schema for the data
-        vbo_data.extend(p.location)
-        vbo_data.extend(p.uv)
-        vbo_data.append(p.particle_size)
-        vbo_data.append(p.age)
-        vbo_data.append(p.max_age)
-        vbo_data.extend(p.color)
+        coords = np.column_stack((numpyutils.unstructured(particles.location),
+                                  numpyutils.unstructured(particles.uv),
+                                  numpyutils.unstructured(particles.size),
+                                  numpyutils.unstructured(particles.age),
+                                  numpyutils.unstructured(particles.max_age),
+                                  numpyutils.unstructured(particles.color)))
+        self.update_vbo(self.vertex_buffer, coords)
 
     def vao_definition_particles(self, shader):
         """ Generate a vao definition for the given shader """
-        # This list needs to conform to the list of attribute written in append_visual_properties
+        # This list needs to conform to the list of attribute written in update_vertex_buffer
         # The shader library particle_def.glsl also defines these properties.
         attribs = [("location", 3),
                    ("uv", 2),

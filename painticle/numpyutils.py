@@ -21,6 +21,15 @@ import numpy as np
 import numpy.lib.recfunctions as recfunctions
 
 
+float32_dtype = np.single
+float64_dtype = np.double
+vec2_dtype = np.dtype([('x', float32_dtype), ('y', float32_dtype)], align=True)
+vec3_dtype = np.dtype([('x', float32_dtype), ('y', float32_dtype), ('z', float32_dtype)], align=True)
+col_dtype = np.dtype([('r', float32_dtype), ('g', float32_dtype), ('b', float32_dtype)], align=True)
+ray_dtype = np.dtype([('origin', vec3_dtype),
+                      ('direction', vec3_dtype)])
+
+
 def unstructured(a):
     if a.dtype.names is None:
         return a
@@ -29,12 +38,6 @@ def unstructured(a):
 
 def to_structured(a, dtype):
     return recfunctions.unstructured_to_structured(a, dtype=dtype)
-
-
-class UnstructuredHolder:
-    def __init__(self, structured_array):
-        for n in structured_array.dtype.names:
-            setattr(self, n, unstructured(structured_array[n]))
 
 
 def repeated_vec(vec, n, dtype=None):

@@ -17,14 +17,13 @@
 
 #include <array>
 #include <cmath>
+#include <iostream>
 
 #include "painticle.h"
 
 BEGIN_PAINTICLE_NAMESPACE
 
-typedef int ID;
-const ID ID_NONE = static_cast<ID>(-1);
-
+//! A simple 3 dimensional vector class
 template<class T>
 class Vec3
 {
@@ -48,6 +47,12 @@ public:
     inline Vec3 operator+(const Vec3& other) const
     { return Vec3(x+other.x, y+other.y, z+other.z); }
 
+    inline void operator+=(const Vec3& other)
+    { x+=other.x; y+=other.y; z+=other.z; }
+
+    inline void operator-=(const Vec3& other)
+    { x-=other.x; y-=other.y; z-=other.z; }
+
     inline T distance(const Vec3& other) const
     { return (other-*this).length(); }
 
@@ -57,12 +62,24 @@ public:
     inline T sqrLength() const
     { return this->dot(*this); }
 
+    inline Vec3<T> projected(const Vec3<T>& onto) const
+    {
+        return (this->dot(onto) / onto.sqrLength()) * onto;
+    }
+
     inline void normalize()
     {
         T factor = T(1) / this->length();
         x *= factor;
         y *= factor;
         z *= factor;
+    }
+
+    inline Vec3<T> normalized() const
+    {
+        Vec3<T> result = *this;
+        result.normalize();
+        return result;
     }
 
     inline T& operator[](std::size_t idx)
