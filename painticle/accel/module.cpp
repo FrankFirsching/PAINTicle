@@ -15,6 +15,7 @@
 
 
 #include "gpubvh.h"
+#include "hashedgrid.h"
 #include "color_conversion.h"
 #include "vec3.h"
 #include "mat4.h"
@@ -101,6 +102,12 @@ shootRays_bvh(BVH& bvh, pybind11::array_t<float> origins, pybind11::array_t<floa
 
     bvh.shootRays(origins_view, directions_view, toObjectTransform, results_view);
     return results;
+}
+
+void build_hashedGrid(HashedGrid& hashedGrid, pybind11::array_t<float> positions)
+{
+    auto positions_view = toMemView3D(positions);
+    hashedGrid.build(positions_view);
 }
 
 /** A parallel numpy supported version of the rgb2hsv function. */
@@ -227,6 +234,14 @@ PYBIND11_MODULE(accel, m) {
         .def("closest_points", &closest_points_bvh)
         .def("shoot_ray", &BVH::shootRay)
         .def("shoot_rays", &shootRays_bvh);
+
+    py::class_<HashedGrid>(m, "HashedGrid")
+        .def(py::init<float>())
+        .def("hash_coord", &HashedGrid::hashCoord)
+        .def("hash_grid", &HashedGrid::hashGrid)
+        .def("build", &build_hashedGrid);
+    m.attr("num_hashed_grid_entries") = py::int_(HashedGrid::NUM_HASHED_GRID_ENTRIES);
+
 
     m.def("build_bvh", &buildBVH_py, "Build the BVH acceleration structure");
     m.def("rgb2hsv", &rgb2hsv_py, "Convert a numpy array of colors from rgb to hsv");
