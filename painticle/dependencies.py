@@ -49,7 +49,8 @@ def install_all():
 
 def is_dependency_installed(module_name):
     """ Check for a single dependency """
-    return importlib.util.find_spec(module_name) is not None
+    from importlib import util
+    return util.find_spec(module_name) is not None
 
 
 def are_dependencies_installed():
