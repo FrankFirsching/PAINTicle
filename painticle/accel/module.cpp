@@ -154,6 +154,15 @@ void add_particles_from_rays(ParticleData& p,
                            speed_range, speed_random, size_range, mass_range, age_range, avg_color, hsv_color_range);
 }
 
+template<typename T>
+inline
+pybind11::array getVector(const std::vector<T>& v)
+{
+    auto dtype = pybind11::dtype::of<T>();
+    auto base = pybind11::array(dtype, {0}, {sizeof(T)});
+    return pybind11::array(dtype, {v.size()}, {sizeof(T)}, v.data(), base);
+}
+
 
 template<typename T>
 inline
@@ -207,6 +216,7 @@ template <typename Type> struct type_caster<Vec3<Type>>
 template <typename Type> struct type_caster<Mat4<Type>>
  : array_caster<Mat4<Type>, Type, false, 16> { };
 
+
 PYBIND11_NAMESPACE_END(detail)
 PYBIND11_NAMESPACE_END(PYBIND11_NAMESPACE)
 
@@ -216,6 +226,7 @@ PYBIND11_MODULE(accel, m) {
     m.doc() = "A specific acceleration module for PAINTicle";
 
     // Numpy support
+    PYBIND11_NUMPY_DTYPE(HashedGrid::IDRelation, cellID, particleID);
     PYBIND11_NUMPY_DTYPE(Vec2f, x,y);
     PYBIND11_NUMPY_DTYPE(Vec3f, x,y,z);
     PYBIND11_NUMPY_DTYPE(BVH::SurfaceInfo, location, normal, tri_index, barycentrics);
@@ -237,10 +248,18 @@ PYBIND11_MODULE(accel, m) {
 
     py::class_<HashedGrid>(m, "HashedGrid")
         .def(py::init<float>())
+        .def_property_readonly("voxel_size", &HashedGrid::voxelSize)
         .def("hash_coord", &HashedGrid::hashCoord)
         .def("hash_grid", &HashedGrid::hashGrid)
-        .def("build", &build_hashedGrid);
+        .def("build", &build_hashedGrid)
+        .def_property_readonly("sorted_particle_ids",
+                               [](HashedGrid& g) -> py::array
+                               { return getVector(g.sortedParticleIDs()); } )
+        .def_property_readonly("cell_offsets",
+                               [](HashedGrid& g) -> py::array
+                               { return getVector(g.cellOffsets()); } );
     m.attr("num_hashed_grid_entries") = py::int_(HashedGrid::NUM_HASHED_GRID_ENTRIES);
+    m.attr("id_none") = py::int_(ID_NONE);
 
 
     m.def("build_bvh", &buildBVH_py, "Build the BVH acceleration structure");

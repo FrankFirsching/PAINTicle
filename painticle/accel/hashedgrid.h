@@ -37,11 +37,25 @@ public:
     //! Build the hashed grid from the positions
     void build(MemView<Vec3f> positions);
 
+    inline float voxelSize() const;
+
     //! Copute the hash value of a position
     inline uint32_t hashCoord(const Vec3f& position) const;
 
     //! Copute the hash value of a grid position
     inline uint32_t hashGrid(const Vec3i& gridCoord) const;
+
+    //! Define a relation between e.g. a particle ID to a cell ID
+    struct IDRelation {
+        ID cellID;
+        ID particleID;
+    };
+
+    //! Access the sorted particle IDs
+    inline const std::vector<IDRelation>& sortedParticleIDs() const;
+
+    //! Access the cell offsets
+    inline const std::vector<ID>& cellOffsets() const;
 
     //! The number of hash entries we manage. This is a trade off between accuracy and memory usage.
     static const uint32_t NUM_HASHED_GRID_ENTRIES = 1000000;
@@ -50,12 +64,6 @@ public:
 protected:
 
 private:
-    //! Define a relation between e.g. a particle ID to a cell ID
-    struct IDRelation {
-        ID particleID;
-        ID cellID;
-    };
-
     //! The particle IDs and cell IDs
     std::vector<IDRelation> m_sortedParticleIDs;
 
@@ -65,6 +73,10 @@ private:
     //! The size of a voxel, that gets mapped to the same hash entry
     float m_voxelSize;
 };
+
+
+inline float HashedGrid::voxelSize() const
+{ return m_voxelSize; }
 
 inline uint32_t HashedGrid::hashCoord(const Vec3f& position) const
 {
@@ -85,5 +97,10 @@ inline uint32_t HashedGrid::hashGrid(const Vec3i& gridCoord) const
     return n;
 }
 
+inline const std::vector<HashedGrid::IDRelation>& HashedGrid::sortedParticleIDs() const
+{ return m_sortedParticleIDs; }
+
+inline const std::vector<ID>& HashedGrid::cellOffsets() const
+{ return m_cellOffsets; }
 
 END_PAINTICLE_NAMESPACE

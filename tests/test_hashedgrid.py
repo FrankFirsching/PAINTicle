@@ -29,6 +29,7 @@ from . import tstutils
 def test_construction():
     grid = accel.HashedGrid(1)
     assert grid is not None
+    assert grid.voxel_size == 1
     x = 10
     y = 14
     z = 53
@@ -43,6 +44,30 @@ def test_construction():
     assert grid.hash_grid([x, y, z]) != grid.hash_grid([x, y-1, z])
     assert grid.hash_grid([x, y, z]) != grid.hash_grid([x, y, z+1])
     assert grid.hash_grid([x, y, z]) != grid.hash_grid([x, y, z-1])
+
+
+def test_data_access():
+    grid = accel.HashedGrid(1)
+    assert grid is not None
+    points = [[0,   0, 0],
+              [1,   1, 1],
+              [2,   2, 2],
+              [1.5, 1, 1]]
+    grid.build(points)
+    sorted_ids = grid.sorted_particle_ids
+    offsets = grid.cell_offsets
+    filled_cell_ids = set()
+    for i in range(len(points)):
+        cell_id = sorted_ids[i][0]
+        particle_id = sorted_ids[i][1]
+        assert cell_id == grid.hash_coord(points[particle_id])
+        filled_cell_ids.add(cell_id)
+    assert len(filled_cell_ids) == 3  # 2 points shall be filling the same cell
+    for i, offset in enumerate(offsets):
+        if i in filled_cell_ids:
+            assert offset != accel.id_none
+        else:
+            assert offset == accel.id_none
 
 
 vert_source = """
