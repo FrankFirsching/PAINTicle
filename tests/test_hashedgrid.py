@@ -70,6 +70,28 @@ def test_data_access():
             assert offset == accel.id_none
 
 
+def test_search():
+    grid = accel.HashedGrid(1)
+    assert grid is not None
+    points = [[0,   0, 0],
+              [1,   1, 1],
+              [2,   2, 2],
+              [1.5, 1, 1]]
+    grid.build(points)
+    sorted_ids = grid.sorted_particle_ids
+    offsets = grid.cell_offsets
+    # Check particle search for particles 1 and 3, which lie in the same cell
+    search_cell_id = grid.hash_coord([1.1, 1, 1])
+    offset = offsets[search_cell_id]
+    assert offset != accel.id_none
+    assert offset == 0 or sorted_ids[offset-1][0] != search_cell_id
+    assert sorted_ids[offset][0] == search_cell_id
+    assert sorted_ids[offset][1] in [1, 3]
+    assert sorted_ids[offset+1][0] == search_cell_id
+    assert sorted_ids[offset+1][1] in [1, 3]
+    assert offset+2 >= len(sorted_ids) or sorted_ids[offset+2][0] != search_cell_id
+
+
 vert_source = """
 in vec2 pos;
 void main() {
