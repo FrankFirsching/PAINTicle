@@ -68,6 +68,9 @@ inline MemView<T> toMemView(const pybind11::array_t<T>& data)
 inline MemView<Vec3f> toMemView3D(const pybind11::array_t<float>& data)
 {
 	pybind11::buffer_info dataBuf = data.request();
+    if(dataBuf.size==0) {
+        return MemView<Vec3f>(nullptr, 0);
+    }
 	if(dataBuf.ndim != 2) {
 		throw std::runtime_error("Error. Number of dimensions must be 2.");
 	}
@@ -248,7 +251,8 @@ PYBIND11_MODULE(accel, m) {
 
     py::class_<HashedGrid>(m, "HashedGrid")
         .def(py::init<float>())
-        .def_property_readonly("voxel_size", &HashedGrid::voxelSize)
+        .def_property("voxel_size", &HashedGrid::voxelSize, &HashedGrid::setVoxelSize)
+        .def_property_readonly("num_particles", &HashedGrid::numParticles)
         .def("hash_coord", &HashedGrid::hashCoord)
         .def("hash_grid", &HashedGrid::hashGrid)
         .def("build", &build_hashedGrid)

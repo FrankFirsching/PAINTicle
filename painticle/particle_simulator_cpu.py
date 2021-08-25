@@ -86,6 +86,7 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         super().__init__(context)
         self._particles = accel.ParticleData()
         self._physics_steps = [GravityStep()]
+        self.hashed_grid = accel.HashedGrid(0.001)
 
     def shutdown(self):
         pass
@@ -130,29 +131,25 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         p.speed = numpyutils.to_structured(new_speed, vec3_dtype)
         p.location = numpyutils.to_structured(new_location, vec3_dtype)
         p.age += sim_data.timestep
-        self._update_location_dependent_variables(sim_data.paint_mesh)
         self._particles.del_dead()
+        self._update_location_dependent_variables(sim_data.paint_mesh)
+        settings = sim_data.settings
+        age_size_factor = max(1, settings.particle_size_age_factor)
+        self.hashed_grid.voxel_size = (settings.particle_size + settings.particle_size_random) * age_size_factor
+        self.hashed_grid.build(numpyutils.unstructured(self._particles.location))
 
     def _update_location_dependent_variables(self, paint_mesh: trianglemesh.TriangleMesh):
         result = paint_mesh.bvh.closest_points(self._particles.location)
         self._particles.location = result['location']
         self._particles.normal = result['normal']
 
-        barycentrics = numpyutils.unstructured(result['barycentrics'])
-        tri_index = result['tri_index']
-        active_uvs = paint_mesh.get_active_uvs()
-        result_vertex_ids = np.take(paint_mesh.triangles, tri_index, axis=0)
-        tri_uv = np.take(active_uvs, result_vertex_ids, axis=0)
-        weighted_uvs = barycentrics[..., np.newaxis]*tri_uv
-        self._particles.uv = numpyutils.to_structured(np.sum(weighted_uvs, axis=1), vec2_dtype)
-        
     def create_uninitialized_particles(self, num_particles):
         particles = accel.ParticleData()
         particles.resize(num_particles)
         return particles
 
     def add_particles_from_rays(self, ray_origins, ray_directions, bvh, object_transform, brush_color,
-                                   painticle_settings):
+                                painticle_settings):
         """ ray_origins and ray_directions need to be given in world space """
         matrix_inv = utils.matrix_to_tuple(object_transform.inverted())
         physics = painticle_settings.physics

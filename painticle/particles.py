@@ -40,7 +40,7 @@ class Particles:
         if omit_painter:
             self.painter = None
         else:
-            self.painter = particle_painter_gpu.ParticlePainterGPU(context)
+            self.painter = particle_painter_gpu.ParticlePainterGPU(context, self.simulator.hashed_grid)
         self.last_shoot_time = 0
 
     def __del__(self):

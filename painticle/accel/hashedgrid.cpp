@@ -33,18 +33,19 @@ void HashedGrid::build(MemView<Vec3f> positions)
 {
     using namespace std;
 
-    m_sortedParticleIDs.clear();
     m_sortedParticleIDs.resize(positions.size());
+
     BEGIN_PARALLEL_FOR(i, positions.size()) {
         IDRelation& sortedEntry = m_sortedParticleIDs[i];
         sortedEntry.particleID = i;
         sortedEntry.cellID = hashCoord(positions[i]);
     } END_PARALLEL_FOR
+
     std::sort(m_sortedParticleIDs.begin(), m_sortedParticleIDs.end(),
               [](const IDRelation& a, const IDRelation& b) { return a.cellID < b.cellID; });
-    
     size_t lastSortedCell = 0;
-    m_cellOffsets[m_sortedParticleIDs[0].cellID] = 0;
+    if(m_sortedParticleIDs.size() > 0)
+        m_cellOffsets[m_sortedParticleIDs[0].cellID] = 0;
     for(size_t sortedID = 0; sortedID<m_sortedParticleIDs.size(); ++sortedID) {
         while(sortedID < m_sortedParticleIDs.size() && m_sortedParticleIDs[sortedID].cellID == lastSortedCell) {
             sortedID++;
@@ -71,5 +72,8 @@ void HashedGrid::build(MemView<Vec3f> positions)
         cout << i++ << ": " << x << endl;
 #endif
 }
+
+void HashedGrid::setVoxelSize(float voxelSize)
+{ m_voxelSize = voxelSize; }
 
 END_PAINTICLE_NAMESPACE

@@ -42,7 +42,7 @@ class Settings(PropertyGroup):
                                                         "<1 makes the particle smaller over time.\n" +
                                                         "=1 keeps the size.\n" +
                                                         ">1 makes it larger.",
-                                            default=1, min=0, soft_max=2,
+                                            default=1, min=0, max=2,
                                             options=set())
     mass: FloatProperty(name="Mass",
                         description="The average mass of a single particle.",

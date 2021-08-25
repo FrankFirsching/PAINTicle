@@ -62,6 +62,7 @@ def load_shader_file(shader_name: str, stage: str) -> str:
         * 'vert' = vertex shader
         * 'geom' = geometry shader
         * 'frag' = fragment shader
+        * 'comp' = compute shader
         * 'def' = definitions for each stage
     """
     basepath = os.path.dirname(os.path.realpath(__file__))
@@ -83,35 +84,61 @@ def _join_shader(definitions_shader, specific_shader, prepend_version=True):
     return version + use_definition + use_specific
 
 
-def load_shader_source(shader_name, additional_libs: typing.Iterable[str] = None) -> typing.Tuple:
-    """ Load all shaders for a given shader name and return a triple with the preprocessed sources """
-    vertex_shader = load_shader_file(shader_name, "vert")
-    geometry_shader = load_shader_file(shader_name, "geom")
-    fragment_shader = load_shader_file(shader_name, "frag")
+def load_shader_source(shader_name: str, additional_libs: typing.Iterable[str] = None,
+                       src_types: typing.Iterable[str] = ["vert", "frag", "geom"]) -> typing.Union[typing.Tuple, str]:
+    """ Load all shaders for a given shader name and return a tuple with the preprocessed sources. If only a single
+        shader type is being queried, then this string is returned directly. """
+    result = [load_shader_file(shader_name, x) for x in src_types]
     definitions_shader = load_shader_file(shader_name, "def")
     if additional_libs is not None:
         for lib in reversed(additional_libs):
             definitions_shader = _join_shader(load_shader_file(lib, "def"), definitions_shader, False)
-    vertex_shader = _join_shader(definitions_shader, vertex_shader)
-    fragment_shader = _join_shader(definitions_shader, fragment_shader)
-    geometry_shader = _join_shader(definitions_shader, geometry_shader)
-    return vertex_shader, fragment_shader, geometry_shader
+    result = [_join_shader(definitions_shader, x) for x in result]
+    return result[0] if len(result)==1 else result
 
 
 def load_shader(shader_name, glcontext: moderngl.Context,
                 additional_libs: typing.Iterable[str] = None) -> moderngl.Program:
     """ Load all shaders for a given shader name and return a compiled shader program """
     vertex_shader, fragment_shader, geometry_shader = load_shader_source(shader_name, additional_libs)
-    program = glcontext.program(vertex_shader=vertex_shader,
-                                fragment_shader=fragment_shader,
-                                geometry_shader=geometry_shader)
+    try:
+        program = glcontext.program(vertex_shader=vertex_shader,
+                                    fragment_shader=fragment_shader,
+                                    geometry_shader=geometry_shader)
+    except moderngl.error.Error as e:
+        shader = "<Unknown shader>"
+        msg = str(e)
+        if "vertex_shader" in msg:
+            shader = vertex_shader
+        elif "fragment_shader" in msg:
+            shader = fragment_shader
+        elif "geometry_shader" in msg:
+            shader = geometry_shader
+        print("\n".join([str(i+1)+": "+l for i, l in enumerate(shader.split("\n"))]))
+        raise(e)
     return program
 
 
-def read_pixel_data_from_framebuffer(width, height, framebuffer: moderngl.Framebuffer):
+def load_compute_shader(shader_name, glcontext: moderngl.Context,
+                        additional_libs: typing.Iterable[str] = None) -> moderngl.Program:
+    """ Load all shaders for a given shader name and return a compiled shader program """
+    compute_shader = load_shader_source(shader_name, additional_libs, ["comp"])
+    try:
+        program = glcontext.compute_shader(compute_shader)
+    except moderngl.error.Error as e:
+        print("\n".join([str(i+1)+": "+l for i, l in enumerate(compute_shader.split("\n"))]))
+        raise(e)
+    return program
+
+
+def read_pixel_data_from_framebuffer(framebuffer: moderngl.Framebuffer, glcontext: moderngl.Context):
     """ Read the pixel from the current back buffer """
+    scope = glcontext.scope(framebuffer=framebuffer)
+    width = framebuffer.width
+    height = framebuffer.height
     buffer = np.empty(width*height*4, np.float32)
-    framebuffer.read_into(buffer, components=4, dtype='f4')
+    with scope:
+        framebuffer.read_into(buffer, viewport=(0, 0, width, height), components=4, dtype='f4')
     return buffer
 
 
@@ -162,3 +189,20 @@ def draw_text(context, pos_x, pos_y, size, text, color):
     blf.size(font_id, size, context.preferences.system.dpi)
     blf.color(font_id, color[0], color[1], color[2], color[3])
     blf.draw(font_id, text)
+
+
+def update_vbo(buffer, data):
+    """ A utility function to update a vertex buffer utilizing moderngl datatypes """
+    vbo_data = data.tobytes()
+    new_size = max(1, len(vbo_data))
+    buffer.orphan(new_size)
+    buffer.write(vbo_data)
+
+
+def textures_match(texture: moderngl.Texture, ref_texture_or_image):
+    """ Returns True, if the given texture matches the given ref_texture in size. """
+    if ref_texture_or_image is None:
+        return texture is None
+    return (texture is not None and
+            texture.width == ref_texture_or_image.width and
+            texture.height == ref_texture_or_image.height)

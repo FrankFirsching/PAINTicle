@@ -27,5 +27,7 @@ from .tstutils import default_scene
 
 @pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
 def test_painter_creation(default_scene):
-    painter = particle_painter_gpu.ParticlePainterGPU(tstutils.get_default_context())
+    bpy.data.meshes['Cube'].calc_normals_split()
+    bpy.data.meshes['Cube'].calc_loop_triangles()
+    painter = particle_painter_gpu.ParticlePainterGPU(tstutils.get_default_context(), None)
     assert painter is not None

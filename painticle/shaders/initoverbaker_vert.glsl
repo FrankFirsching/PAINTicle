@@ -13,14 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
-
-in vec3 vertex;
 in vec2 uv;
-
-out vec3 texel_pos;
 
 void main()
 {
   gl_Position = vec4(2*uv - vec2(1), 0.0f, 1.0f);
-  texel_pos = vertex;
 }

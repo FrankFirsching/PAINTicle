@@ -23,6 +23,8 @@
 const uint NUM_HASHED_GRID_ENTRIES = 1000000u;
 //const uint NUM_HASHED_GRID_ENTRIES = 32u;
 
+const uint ID_NONE = uint(4294967295);
+
 uint hashGrid(ivec3 gridCoord) {
     // some large primes
     const uint p1 = 73856093u;
@@ -33,8 +35,23 @@ uint hashGrid(ivec3 gridCoord) {
     return n;
 }
 
+ivec3 gridCoord(vec3 coord, float voxelSize)
+{ return ivec3(floor(coord / voxelSize)); }
 
 uint hashCoord(vec3 coord, float voxelSize) {
-    ivec3 gridCoord = ivec3(floor(coord / voxelSize));
-    return hashGrid(gridCoord);
+    return hashGrid(gridCoord(coord, voxelSize));
 }
+
+// Define a relation between e.g. a particle ID to a cell ID. Needs to be synchronized to C++ definition
+struct IDRelation {
+    uint cellID;
+    uint particleID;
+};
+
+#define HASHED_GRID_BUFFER(BIND_ID, NAME) \
+    layout(std430, binding=BIND_ID) readonly buffer NAME { \
+        float NAME##_voxelSize; \
+        uint NAME##_numParticles; \
+        uint NAME##_cellOffsets[NUM_HASHED_GRID_ENTRIES]; \
+        IDRelation NAME##_sortedParticleIDs[]; \
+    }

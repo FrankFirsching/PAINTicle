@@ -16,15 +16,21 @@
 // Definitions shader
 
 #define EMPTY
+
+// When changing the order of the fields or adding/removing fields ensure to also adapt
+// particle_painter_gpu accordingly.
+// IMPORTANT: Ensure, that GLSL is going to tightly pack those fields in std430 layout.
+// Otherwise our python code for filling the buffers would create wrong data, since the padding rules
+// would be pretty inefficient to implement in numpy.
 #define PARTICLE_FIELDS(x) \
     x vec3 location; \
-    x vec2 uv; \
     x float size; \
+    x vec2 uv; \
     x float age; \
     x float max_age; \
-    x vec3 color; \
+    x vec3 color;
 
-#define CONSTRUCT_PARTICLE_ARGS location, uv, size, age, max_age, color
+#define CONSTRUCT_PARTICLE_ARGS location, size, uv, age, max_age, color
 
 struct Particle
 {

@@ -136,7 +136,7 @@ def perform_gpu_test(frag_source, cpu_func):
     points = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
     indices = ((0, 1, 2), (2, 3, 0))
     batch = gpu_extras.batch.batch_for_shader(shader, "TRIS", {'pos': points}, indices=indices)
-    for z in range(-5,5):
+    for z in range(-5, 5):
         gpu_hashes = []
         with offscreen.bind():
             shader.uniform_int('z', z)
@@ -161,8 +161,10 @@ def perform_gpu_test(frag_source, cpu_func):
 def test_gpu_similarity_bucket():
     perform_gpu_test(bucket_frag, accel.HashedGrid.hash_grid)
 
+
 def cpu_dot_5_offset_func(grid, xyz):
     return grid.hash_coord([i+0.5 for i in xyz])
+
 
 @pytest.mark.skipif(tstutils.no_ui(), reason="requires UI")
 def test_gpu_similarity_coords():

@@ -79,7 +79,7 @@ Vec3f hsv2rgb(const Vec3f& hsv)
         return Vec3f(hsv[2], p, q);
     }
     
-    return Vec3f();
+    return Vec3f(0.0f, 0.0f, 0.0f);
 }
 
 void hsv2rgb(MemView<Vec3f> hsv, MemView<Vec3f> results)

@@ -37,7 +37,14 @@ public:
     //! Build the hashed grid from the positions
     void build(MemView<Vec3f> positions);
 
+    //! Query the voxel size we're using for the coordinate hashing
     inline float voxelSize() const;
+
+    //! Query the voxel size we're using for the coordinate hashing
+    void setVoxelSize(float voxelSize);
+
+    //! Query the number of hashed particles
+    inline size_t numParticles() const;
 
     //! Copute the hash value of a position
     inline uint32_t hashCoord(const Vec3f& position) const;
@@ -77,6 +84,9 @@ private:
 
 inline float HashedGrid::voxelSize() const
 { return m_voxelSize; }
+
+inline size_t HashedGrid::numParticles() const
+{ return m_sortedParticleIDs.size(); }
 
 inline uint32_t HashedGrid::hashCoord(const Vec3f& position) const
 {

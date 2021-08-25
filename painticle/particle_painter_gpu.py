@@ -17,36 +17,23 @@
 
 # <pep8 compliant>
 
-from painticle import numpyutils
+from . import numpyutils
 from . import particle_painter
 from . import gpu_utils
 from . import dependencies
 from . import accel
 from . import utils
 from . import preferences
+from . import meshbuffer
+from . import overbaker
 from .utils import Error
 
 import bpy
 import bgl
 import numpy as np
+import struct
 
 import moderngl
-
-
-class MeshBuffers:
-    def __init__(self, glcontext, shader):
-        self.glcontext = glcontext
-        self.shader = shader
-        self.vertices = glcontext.buffer(reserve=1)
-        self.uv = glcontext.buffer(reserve=1)
-        self.indices = glcontext.buffer(reserve=1)
-
-    def draw(self):
-        vao = self.glcontext.vertex_array(self.shader,
-                                          [(self.vertices, '3f', 'vertex'),
-                                           (self.uv, '2f', 'uv')],
-                                          index_buffer=self.indices)
-        vao.render(moderngl.vertex_array.TRIANGLES)
 
 
 class ParticlePainterGPU(particle_painter.ParticlePainter):
@@ -55,7 +42,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
     draw_handler = None
     draw_handler_text = None
 
-    def __init__(self, context: bpy.types.Context):
+    def __init__(self, context: bpy.types.Context, hashed_grid: accel.HashedGrid):
         super().__init__(context)
         # Fetch preferences:
         # We're using the area of the image as preview threshold, preference specifies the edge length
@@ -72,15 +59,14 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.last_active_image_slot = None
         preview_shader_name = "particle3d" if self.preview_mode == "particles" else "texture_preview"
         self.preview_shader = gpu_utils.load_shader(preview_shader_name, self.glcontext, ["utils", "particle"])
-        self.paint_shader = gpu_utils.load_shader("particle2d", self.glcontext, ["utils", "particle"])
-        self.vertex_buffer = self.glcontext.buffer(reserve=1)
-        self.paint_vertex_array = self.vao_definition_particles(self.paint_shader)
+        self.paint_shader = gpu_utils.load_shader("particle2d", self.glcontext, ["utils", "particle", "gridhash"])
+        self.particles_buffer = self.glcontext.buffer(reserve=1)
         self.paintbuffer_changed = False
-        # The mesh vbo data, in case preview mode is texture_preview
-        self.mesh_buffers = None
-        if self.preview_mode == "texture_overlay":
-            self.mesh_buffers = MeshBuffers(self.glcontext, self.preview_shader)
-        self.build_mesh_vbo(self.get_active_mesh())
+        self.mesh_buffer = meshbuffer.MeshBuffer(self.glcontext, self.paint_shader)
+        self.mesh_buffer.build_mesh_vbo(self.get_active_mesh())
+        # Setup hashed grid and the GPU buffers for it
+        self.hashed_grid = hashed_grid
+        self.hashed_grid_buffer = self.glcontext.buffer(reserve=1)
         # A hack for the update problem
         self.roll_factor = 1
         self.use_preview = False
@@ -92,7 +78,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.update_paintbuffer()
 
     def shutdown(self):
-        self.write_blender_image()
+        # self.write_blender_image()
         self.set_use_preview(False)
         if ParticlePainterGPU.draw_handler_text is not None:
             bpy.types.SpaceView3D.draw_handler_remove(ParticlePainterGPU.draw_handler_text, "WINDOW")
@@ -127,7 +113,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             preview_vertex_array.render(moderngl.vertex_array.POINTS)
         elif self.preview_mode == "texture_overlay":
             self.paintbuffer_sampler.use()
-            self.mesh_buffers.draw()
+            self.mesh_buffer.draw(self.preview_shader)
         else:
             raise Error("Unknown preview_mode!")
 
@@ -149,8 +135,8 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
 
         num_particles = particles.num_particles
         self.update_paintbuffer()
-        self.update_vertex_buffer(particles)
-        self.update_uniforms(time_step)
+        self.update_particles_buffer(particles)
+        self.update_paint_shader_uniforms(time_step)
         if num_particles == 0:
             if self.paintbuffer_changed:
                 self.write_blender_image()
@@ -167,8 +153,11 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         # Draw into the texture paint framebuffer
         scope = self.glcontext.scope(framebuffer=self.paintbuffer, enable=moderngl.Context.BLEND)
         with scope:
+            # We already premultiply in shader blending
+            self.glcontext.blend_func = (moderngl.ONE, moderngl.ONE_MINUS_SRC_ALPHA,
+                                         moderngl.ONE, moderngl.ONE)
             self.paintbuffer_changed = True
-            self.paint_vertex_array.render(moderngl.vertex_array.POINTS, num_particles)
+            self.mesh_buffer.draw()
 
         if self.use_preview:
             self.context.area.tag_redraw()
@@ -208,25 +197,30 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             self.undoimage = None
             self.context.window.cursor_modal_restore()
 
-    def update_vertex_buffer(self, particles):
+    def update_particles_buffer(self, particles):
+        # This list needs to conform to the list of attribute written in vao_definition_particles
+        # The shader library particle_def.glsl also defines these properties.
+        padding = np.empty(particles.age.size, dtype=numpyutils.float32_dtype)
         coords = np.column_stack((numpyutils.unstructured(particles.location),
-                                  numpyutils.unstructured(particles.uv),
                                   numpyutils.unstructured(particles.size),
+                                  numpyutils.unstructured(particles.uv),
                                   numpyutils.unstructured(particles.age),
                                   numpyutils.unstructured(particles.max_age),
-                                  numpyutils.unstructured(particles.color)))
-        self.update_vbo(self.vertex_buffer, coords)
+                                  numpyutils.unstructured(particles.color),
+                                  numpyutils.unstructured(padding)))
+        gpu_utils.update_vbo(self.particles_buffer, coords)
 
     def vao_definition_particles(self, shader):
         """ Generate a vao definition for the given shader """
         # This list needs to conform to the list of attribute written in update_vertex_buffer
         # The shader library particle_def.glsl also defines these properties.
         attribs = [("location", 3),
-                   ("uv", 2),
                    ("size", 1),
+                   ("uv", 2),
                    ("age", 1),
                    ("max_age", 1),
-                   ("color", 3)]
+                   ("color", 3),
+                   ("padding", 1)]
         sizes = []
         names = []
         for attrib in attribs:
@@ -236,21 +230,36 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             else:
                 x = "{}x".format(attrib[1]*4)  # We use floats, so padding is 4 bytes per float
             sizes.append((x))
-        return self.glcontext.vertex_array(shader, [(self.vertex_buffer, " ".join(sizes), *names)])
+        return self.glcontext.vertex_array(shader, [(self.particles_buffer, " ".join(sizes), *names)])
 
-    def update_uniforms(self, time_step):
-        width = self.paintbuffer.width
-        height = self.paintbuffer.height
+    def update_paint_shader_uniforms(self, time_step):
+        self.update_hashed_grid_buffer()
+        self.particles_buffer.bind_to_storage_buffer(1)
         brush = self.get_active_brush()
-        self.paint_shader["image_size"] = (width, height)
         self.paint_shader["strength"] = brush.strength
         self.paint_shader['time_step'] = time_step
         self.paint_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
+
+    def update_hashed_grid_buffer(self):
+        fixed_struct = struct.pack("fI", self.hashed_grid.voxel_size, self.hashed_grid.num_particles)
+        fixed_struct_size = len(fixed_struct)
+        cell_offsets = self.hashed_grid.cell_offsets
+        cell_offsets_size = len(cell_offsets)*4  # floats have 4 bytes
+        sorted_particle_ids = self.hashed_grid.sorted_particle_ids
+        sorted_particle_ids_size = len(sorted_particle_ids)*2*4  # 2 unsigned int with each 4 bytes
+        self.hashed_grid_buffer.orphan(fixed_struct_size+cell_offsets_size+sorted_particle_ids_size)
+        self.hashed_grid_buffer.write(fixed_struct, offset=0)
+        self.hashed_grid_buffer.write(cell_offsets, offset=fixed_struct_size)
+        self.hashed_grid_buffer.write(sorted_particle_ids, offset=fixed_struct_size+cell_offsets_size)
+        self.hashed_grid_buffer.bind_to_storage_buffer(0)
 
     def update_preview_uniforms(self):
         model_view_projection = self.context.region_data.perspective_matrix @ self.get_active_object().matrix_world
         self.preview_shader["model_view_projection"] = utils.matrix_to_tuple(model_view_projection)
         if self.preview_mode == "particles":
+            height = self.paintbuffer.height
+            self.preview_shader["image_height"] = height
+            self.preview_shader["projection"] = utils.matrix_to_tuple(self.context.region_data.window_matrix)
             self.preview_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
         elif self.preview_mode == "texture_overlay":
             self.preview_shader["opacity"] = self.overlay_preview_opacity
@@ -262,12 +271,10 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         image.pixels.foreach_set(pixels)
 
     def write_blender_image(self):
-        scope = self.glcontext.scope(framebuffer=self.paintbuffer, enable=moderngl.Context.BLEND)
-        with scope:
-            width = self.paintbuffer.width
-            height = self.paintbuffer.height
-            pixels = gpu_utils.read_pixel_data_from_framebuffer(width, height, self.paintbuffer)
-            self.write_blender_image_pixels(pixels)
+        baker = overbaker.Overbaker(self.mesh_buffer, self.glcontext)
+        baker.overbake(self.paintbuffer.color_attachments[0], 4)
+        pixels = gpu_utils.read_pixel_data_from_framebuffer(self.paintbuffer, self.glcontext)
+        self.write_blender_image_pixels(pixels)
         self.paintbuffer_changed = False
         self.update_blender_viewport()
 
@@ -292,41 +299,3 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             'region': self.context.region,
         }
         bpy.ops.view3d.view_roll(override, angle=0.000005*self.roll_factor)
-
-    def build_mesh_vbo(self, mesh: bpy.types.Mesh):
-        if self.mesh_buffers is None:
-            return  # Nothing to do, since we're not painting the mesh
-
-        if mesh is None:
-            return  # Nothing to do, if we didn't get an active mesh
-
-        if (not mesh.polygons):
-            raise Error("ERROR: Mesh doesn't have polygons")
-
-        v = np.empty((len(mesh.vertices), 3), 'f')
-        mesh.vertices.foreach_get("co", np.reshape(v, len(mesh.vertices)*3))
-
-        uvMap = mesh.uv_layers.active.data
-        uv = np.empty((len(uvMap), 2), 'f')
-        uvMap.foreach_get("uv", np.reshape(uv, len(uvMap)*2))
-
-        vindices = np.empty(len(mesh.loop_triangles)*3, 'i')
-        mesh.loop_triangles.foreach_get("vertices", vindices)
-        indices = np.empty(len(mesh.loop_triangles)*3, 'i')
-        mesh.loop_triangles.foreach_get("loops", indices)
-
-        # We need to shuffle the vertices into the loop indices
-        vert_ind = np.empty(indices.max()+1, 'i')
-        np.put(vert_ind, indices, vindices)
-        vertices = np.take(v, vert_ind, 0)
-
-        self.update_vbo(self.mesh_buffers.vertices, vertices)
-        self.update_vbo(self.mesh_buffers.uv, uv)
-        self.update_vbo(self.mesh_buffers.indices, indices)
-
-    def update_vbo(self, buffer, data):
-        """ A utility function to update a vertex buffer """
-        vbo_data = data.tobytes()
-        new_size = max(1, len(vbo_data))
-        buffer.orphan(new_size)
-        buffer.write(vbo_data)
