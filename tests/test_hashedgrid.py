@@ -46,6 +46,17 @@ def test_construction():
     assert grid.hash_grid([x, y, z]) != grid.hash_grid([x, y, z-1])
 
 
+def test_zero_area():
+    grid = accel.HashedGrid(1)
+    knownHashes = set()
+    for x in range(-1, 2):
+        for y in range(-1, 2):
+            for z in range(-1, 2):
+                hash = grid.hash_grid([x, y, z])
+                assert hash not in knownHashes, f'conflict for grid coords {x} {y} {z}'
+                knownHashes.add(hash)
+
+
 def test_data_access():
     grid = accel.HashedGrid(1)
     assert grid is not None
@@ -121,13 +132,13 @@ uniform int screen_size;
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 void main() {
    vec2 coord = vec2(gl_FragCoord.xy+0.5) - screen_size / 2;
-   frag_color = unpackUnorm4x8(hashCoord(vec3(coord, z+0.5), 1));
+   frag_color = unpackUnorm4x8(hashCoord(vec3(coord, z+0.5), 3));
 }
 """
 
 
 def perform_gpu_test(frag_source, cpu_func):
-    grid = accel.HashedGrid(1)
+    grid = accel.HashedGrid(3)
     assert grid is not None
     hash_grid_glsl = gpu_utils.load_shader_file("gridhash", "def")
     shader = gpu.types.GPUShader(vert_source, frag_source, libcode=hash_grid_glsl)

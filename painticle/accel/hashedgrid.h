@@ -98,10 +98,19 @@ inline uint32_t HashedGrid::hashCoord(const Vec3f& position) const
 
 inline uint32_t HashedGrid::hashGrid(const Vec3i& gridCoord) const
 {
+    // Hash function is originally based on this blog post:
+    // https://wickedengine.net/2018/05/21/scalabe-gpu-fluid-simulation/
+    // However, those original numbers calculate the same hash value for e.g. (-1 -1 1) and (-1 1 -1)
+    // Since those are within the search radius for the cell (0 0 0), they needed to be changed.
     // some large primes
-    const uint32_t p1 = 73856093;
-    const uint32_t p2 = 19349663;
-    const uint32_t p3 = 83492791;
+    //    const uint32_t p1 = 73856093;
+    //    const uint32_t p2 = 19349663;
+    //    const uint32_t p3 = 83492791;
+
+    const uint32_t p1 = 917935420;
+    const uint32_t p2 = 659095552;
+    const uint32_t p3 = 698673843;
+
     uint32_t n = p1*gridCoord.x ^ p2*gridCoord.y ^ p3*gridCoord.z;
     n %= NUM_HASHED_GRID_ENTRIES;
     return n;
