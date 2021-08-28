@@ -21,6 +21,8 @@
 #include "gpubvh.h"
 #include "memview.h"
 
+#include <random>
+
 BEGIN_PAINTICLE_NAMESPACE
 
 //! The container class for all particles
@@ -50,10 +52,10 @@ public:
 
     //! Create particles from the given rays
     void addParticlesFromRays(MemView<Vec3f> rayOrigins, MemView<Vec3f> rayDirections,
-                                 const Mat4f& toObjectTransform, const BVH& bvh,
-                                 const Vec2f& speedRange,  const Vec3f& speedRandom,
-                                 const Vec2f& sizeRange, const Vec2f& massRange, const Vec2f& ageRange,
-                                 const Vec3f& avgColor, const Vec3f& hsvColorRange);
+                              const Mat4f& toObjectTransform, const BVH& bvh,
+                              const Vec2f& speedRange,  const Vec3f& speedRandom,
+                              const Vec2f& sizeRange, const Vec2f& massRange, const Vec2f& ageRange,
+                              const Vec3f& avgColor, const Vec3f& hsvColorRange);
 
     //! The location of the particles
     ParticleField<Vec3f> location;
@@ -85,6 +87,9 @@ public:
     //! The color of the particles
     ParticleField<Vec3f> color;
 
+private:
+    //! The randon number generator to use when adding particles
+    std::default_random_engine m_generator;
 };
 
 

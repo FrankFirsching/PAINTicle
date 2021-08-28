@@ -16,6 +16,7 @@
 #pragma once
 
 #include "painticle.h"
+#include "traits.h"
 
 #include <vector>
 
@@ -26,9 +27,12 @@ template<typename T>
 class MemView
 {
 public:
+    //! Define a const compatible void type
+    typedef typename MatchConst<T, void >::type VoidType;
+
     //! Construct with pointer and length in counted elements and an element stride in bytes
-    MemView(void* ptr, size_t length, size_t stride = sizeof(T))
-    : m_ptr(static_cast<Byte*>(ptr)), m_length(length), m_stride(stride)
+    MemView(VoidType* ptr, size_t length, size_t stride = sizeof(T))
+    : m_ptr(static_cast<ByteType*>(ptr)), m_length(length), m_stride(stride)
     {}
 
     //! Constructor for an STL vector container
@@ -40,6 +44,14 @@ public:
     inline size_t size() const
     { return m_length; }
 
+    //! Get a pointer to the data
+    inline T* data()
+    { return static_cast<T*>(m_ptr); }
+
+    //! Get a pointer to the data
+    inline const T* data() const
+    { return static_cast<T*>(m_ptr); }
+
     //! Access one element managed by the mem view
     inline T& operator[](size_t i)
     { return *reinterpret_cast<T*>(m_ptr + i*m_stride); }
@@ -49,8 +61,11 @@ public:
     { return *reinterpret_cast<T*>(m_ptr + i*m_stride); }
 
 private:
+    //! Define a const compatible byte type
+    typedef typename MatchConst<T, Byte>::type ByteType;
+
     //! The data pointer
-    Byte* m_ptr;
+    ByteType* m_ptr;
 
     //! The length of the data
     size_t m_length;

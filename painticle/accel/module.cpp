@@ -15,6 +15,7 @@
 
 
 #include "gpubvh.h"
+#include "hashedgrid.h"
 #include "color_conversion.h"
 #include "vec3.h"
 #include "mat4.h"
@@ -67,6 +68,9 @@ inline MemView<T> toMemView(const pybind11::array_t<T>& data)
 inline MemView<Vec3f> toMemView3D(const pybind11::array_t<float>& data)
 {
 	pybind11::buffer_info dataBuf = data.request();
+    if(dataBuf.size==0) {
+        return MemView<Vec3f>(nullptr, 0);
+    }
 	if(dataBuf.ndim != 2) {
 		throw std::runtime_error("Error. Number of dimensions must be 2.");
 	}
@@ -101,6 +105,12 @@ shootRays_bvh(BVH& bvh, pybind11::array_t<float> origins, pybind11::array_t<floa
 
     bvh.shootRays(origins_view, directions_view, toObjectTransform, results_view);
     return results;
+}
+
+void build_hashedGrid(HashedGrid& hashedGrid, pybind11::array_t<float> positions)
+{
+    auto positions_view = toMemView3D(positions);
+    hashedGrid.build(positions_view);
 }
 
 /** A parallel numpy supported version of the rgb2hsv function. */
@@ -145,6 +155,15 @@ void add_particles_from_rays(ParticleData& p,
 {
     p.addParticlesFromRays(toMemView3D(ray_origins), toMemView3D(ray_directions), to_object_transform, bvh,
                            speed_range, speed_random, size_range, mass_range, age_range, avg_color, hsv_color_range);
+}
+
+template<typename T>
+inline
+pybind11::array getVector(const std::vector<T>& v)
+{
+    auto dtype = pybind11::dtype::of<T>();
+    auto base = pybind11::array(dtype, {0}, {sizeof(T)});
+    return pybind11::array(dtype, {v.size()}, {sizeof(T)}, v.data(), base);
 }
 
 
@@ -200,6 +219,7 @@ template <typename Type> struct type_caster<Vec3<Type>>
 template <typename Type> struct type_caster<Mat4<Type>>
  : array_caster<Mat4<Type>, Type, false, 16> { };
 
+
 PYBIND11_NAMESPACE_END(detail)
 PYBIND11_NAMESPACE_END(PYBIND11_NAMESPACE)
 
@@ -209,6 +229,7 @@ PYBIND11_MODULE(accel, m) {
     m.doc() = "A specific acceleration module for PAINTicle";
 
     // Numpy support
+    PYBIND11_NUMPY_DTYPE(HashedGrid::IDRelation, cellID, particleID);
     PYBIND11_NUMPY_DTYPE(Vec2f, x,y);
     PYBIND11_NUMPY_DTYPE(Vec3f, x,y,z);
     PYBIND11_NUMPY_DTYPE(BVH::SurfaceInfo, location, normal, tri_index, barycentrics);
@@ -227,6 +248,23 @@ PYBIND11_MODULE(accel, m) {
         .def("closest_points", &closest_points_bvh)
         .def("shoot_ray", &BVH::shootRay)
         .def("shoot_rays", &shootRays_bvh);
+
+    py::class_<HashedGrid>(m, "HashedGrid")
+        .def(py::init<float>())
+        .def_property("voxel_size", &HashedGrid::voxelSize, &HashedGrid::setVoxelSize)
+        .def_property_readonly("num_particles", &HashedGrid::numParticles)
+        .def("hash_coord", &HashedGrid::hashCoord)
+        .def("hash_grid", &HashedGrid::hashGrid)
+        .def("build", &build_hashedGrid)
+        .def_property_readonly("sorted_particle_ids",
+                               [](HashedGrid& g) -> py::array
+                               { return getVector(g.sortedParticleIDs()); } )
+        .def_property_readonly("cell_offsets",
+                               [](HashedGrid& g) -> py::array
+                               { return getVector(g.cellOffsets()); } );
+    m.attr("num_hashed_grid_entries") = py::int_(HashedGrid::NUM_HASHED_GRID_ENTRIES);
+    m.attr("id_none") = py::int_(ID_NONE);
+
 
     m.def("build_bvh", &buildBVH_py, "Build the BVH acceleration structure");
     m.def("rgb2hsv", &rgb2hsv_py, "Convert a numpy array of colors from rgb to hsv");

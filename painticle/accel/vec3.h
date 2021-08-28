@@ -116,6 +116,7 @@ inline std::ostream& operator<<(std::ostream& s, const Vec3<T>& v)
 }
 
 typedef Vec3<float> Vec3f;
+typedef Vec3<int> Vec3i;
 typedef Vec3<ID> Vec3u;
 
 END_PAINTICLE_NAMESPACE

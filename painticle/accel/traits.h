@@ -13,14 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
+#pragma once
 
-in vec3 vertex;
-in vec2 uv;
+#include "painticle.h"
 
-out vec3 texel_pos;
+#include <type_traits>
 
-void main()
+BEGIN_PAINTICLE_NAMESPACE
+
+template<typename BASE_T, typename TARGET_T>
+struct MatchConst
 {
-  gl_Position = vec4(2*uv - vec2(1), 0.0f, 1.0f);
-  texel_pos = vertex;
-}
+    typedef typename std::conditional<std::is_const<BASE_T>::value, const TARGET_T, TARGET_T>::type type;
+};
+
+END_PAINTICLE_NAMESPACE

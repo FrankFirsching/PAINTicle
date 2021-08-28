@@ -21,11 +21,15 @@ out Particle p_frag;
 
 uniform float particle_size_age_factor;
 uniform mat4 model_view_projection;
+uniform mat4 projection;
+uniform float image_height;
 
 void main()
 {
     p_frag = Particle(CONSTRUCT_PARTICLE_ARGS);
     gl_Position = model_view_projection * vec4(location, 1);
-    gl_Position.z -= 0.001; // Use a small offset to draw points in front of surface
-    gl_PointSize = particle_size(p_frag, particle_size_age_factor);
+    // Convert particle world size into a pixel size
+    gl_PointSize = 0.5*image_height*projection[1][1]*particle_size(p_frag, particle_size_age_factor) / gl_Position.w;
+    // Use a small offset based on the point size to draw points in front of surface
+    gl_Position.z -= gl_PointSize * 0.0001;
 }

@@ -16,8 +16,6 @@
 #include "particledata.h"
 #include "color_conversion.h"
 
-#include <random>
-
 BEGIN_PAINTICLE_NAMESPACE
 
 ParticleData::ParticleData()
@@ -119,12 +117,14 @@ void ParticleData::addParticlesFromRays(MemView<Vec3f> rayOrigins, MemView<Vec3f
   
     size_t numRays = rayOrigins.size();
 
+    if(numRays == 0)
+        return; // Nothing to do
+
     std::vector<BVH::SurfaceInfo> surface_infos;
     surface_infos.resize(numRays);
     bvh.shootRays(rayOrigins, rayDirections, toObjectTransform, MemView<BVH::SurfaceInfo>(surface_infos));
 
 
-    std::default_random_engine generator;
     std::uniform_real_distribution<float> speedDistribution(speedRange[0], speedRange[1]);
     std::uniform_real_distribution<float> speedXDistribution(-speedRandom[0], speedRandom[0]);
     std::uniform_real_distribution<float> speedYDistribution(-speedRandom[1], speedRandom[1]);
@@ -144,17 +144,19 @@ void ParticleData::addParticlesFromRays(MemView<Vec3f> rayOrigins, MemView<Vec3f
             const Vec3f& rayDirection = rayDirections[i];
             location.push_back(surface_info.location);
             acceleration.emplace_back(0,0,0);
-            Vec3f particleSpeed = rayDirection.normalized() * speedDistribution(generator);
+            Vec3f particleSpeed = rayDirection.normalized() * speedDistribution(m_generator);
             particleSpeed -= particleSpeed.projected(surface_info.normal);
-            Vec3f speedRnd(speedXDistribution(generator), speedYDistribution(generator), speedZDistribution(generator));
+            Vec3f speedRnd(speedXDistribution(m_generator),
+                           speedYDistribution(m_generator),
+                           speedZDistribution(m_generator));
             speed.push_back(particleSpeed + speedRnd);
             normal.push_back(surface_info.normal);
             uv.emplace_back(0,0);
-            size.emplace_back(sizeDistribution(generator));
-            mass.emplace_back(massDistribution(generator));
+            size.emplace_back(sizeDistribution(m_generator));
+            mass.emplace_back(massDistribution(m_generator));
             age.emplace_back(0);
-            max_age.emplace_back(ageDistribution(generator));
-            Vec3f hsvOffset(hDistribution(generator), sDistribution(generator), vDistribution(generator));
+            max_age.emplace_back(ageDistribution(m_generator));
+            Vec3f hsvOffset(hDistribution(m_generator), sDistribution(m_generator), vDistribution(m_generator));
             Vec3f particleColor = applyHsvOffset(avgColor, hsvOffset);
             color.push_back(particleColor);
         }

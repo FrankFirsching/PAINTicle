@@ -20,7 +20,7 @@
 
 BEGIN_PAINTICLE_NAMESPACE
 
-typedef int ID;
+typedef unsigned int ID;
 const ID ID_NONE = static_cast<ID>(-1);
 
 typedef unsigned char Byte;
