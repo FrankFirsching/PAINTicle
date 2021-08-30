@@ -52,6 +52,9 @@ public:
     //! Copute the hash value of a grid position
     inline uint32_t hashGrid(const Vec3i& gridCoord) const;
 
+    //! Compute the grid coordinate for given position
+    inline Vec3i gridCoord(const Vec3f& position) const;
+
     //! Define a relation between e.g. a particle ID to a cell ID
     struct IDRelation {
         ID cellID;
@@ -88,12 +91,16 @@ inline float HashedGrid::voxelSize() const
 inline size_t HashedGrid::numParticles() const
 { return m_sortedParticleIDs.size(); }
 
+inline Vec3i HashedGrid::gridCoord(const Vec3f& position) const
+{
+    return Vec3i(static_cast<int>(floor(position.x/m_voxelSize)),
+                 static_cast<int>(floor(position.y/m_voxelSize)),
+                 static_cast<int>(floor(position.z/m_voxelSize)));
+}
+
 inline uint32_t HashedGrid::hashCoord(const Vec3f& position) const
 {
-    Vec3i gridCoord(static_cast<int>(floor(position.x/m_voxelSize)),
-                    static_cast<int>(floor(position.y/m_voxelSize)),
-                    static_cast<int>(floor(position.z/m_voxelSize)));
-    return hashGrid(gridCoord);
+    return hashGrid(gridCoord(position));
 }
 
 inline uint32_t HashedGrid::hashGrid(const Vec3i& gridCoord) const

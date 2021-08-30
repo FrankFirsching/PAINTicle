@@ -53,3 +53,10 @@ def vec_length(a):
     # einsum approach is fastest.
     # basically it's: np.sqrt(np.sum(ua**2, axis=1))
     return np.sqrt(np.einsum('ij,ij->i', ua, ua))
+
+
+def vec_dot(a,b):
+    """ Calculate the vector length of each entry in the list of 3 or 2-dimensional vectors """
+    ua = unstructured(a)
+    ub = unstructured(b)
+    return np.einsum('ij,ij->i', ua, ub)

@@ -35,20 +35,23 @@ public:
     : x(x_), y(y_), z(z_)
     {}
 
-    inline Vec3 operator-(const Vec3& other) const
-    { return Vec3(x-other.x, y-other.y, z-other.z); }
-
     inline T dot(const Vec3& other) const
     { return x*other.x + y*other.y + z*other.z; }
 
     inline Vec3 operator*(T f) const
     { return Vec3(f*x, f*y, f*z); }
 
+    inline Vec3 operator/(T f) const
+    { return Vec3(x/f, y/f, z/f); }
+
     inline Vec3 operator+(const Vec3& other) const
     { return Vec3(x+other.x, y+other.y, z+other.z); }
 
     inline void operator+=(const Vec3& other)
     { x+=other.x; y+=other.y; z+=other.z; }
+
+    inline Vec3 operator-(const Vec3& other) const
+    { return Vec3(x-other.x, y-other.y, z-other.z); }
 
     inline void operator-=(const Vec3& other)
     { x-=other.x; y-=other.y; z-=other.z; }

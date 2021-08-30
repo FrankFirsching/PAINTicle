@@ -17,7 +17,6 @@
 
 # A particles shooter class
 
-from painticle import particle_simulator
 from bpy_extras import view3d_utils
 import bpy
 
@@ -25,7 +24,8 @@ import math
 import random
 
 from . import trianglemesh
-from . import particle_simulator_cpu
+from .sim import particle_simulator_cpu
+from .sim import particle_simulator
 
 
 class Particles:

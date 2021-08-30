@@ -89,7 +89,7 @@ public:
 
 private:
     //! The randon number generator to use when adding particles
-    std::default_random_engine m_generator;
+    static std::default_random_engine m_generator;
 };
 
 

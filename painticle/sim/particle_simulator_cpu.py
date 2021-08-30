@@ -17,24 +17,17 @@
 
 # <pep8 compliant>
 
-
-from abc import ABC
-from abc import abstractmethod
-
 from . import particle_simulator
-from . import utils
-from . import numpyutils
-from . import accel
-
+from .. import utils
+from .. import numpyutils
+from .. import accel
+from . import gravitystep, repelstep, frictionstep
 import bpy
 import numpy as np
 
-import random
-import time
-
 
 from painticle import trianglemesh
-from .numpyutils import float32_dtype, float64_dtype, vec2_dtype, vec3_dtype, col_dtype
+from ..numpyutils import float32_dtype, float64_dtype, vec2_dtype, vec3_dtype, col_dtype
 
 # This type needs to be conform to the definition of ParticleData in accel/particledata.h
 particle_dtype = np.dtype([('location', vec3_dtype),
@@ -50,43 +43,15 @@ particle_dtype = np.dtype([('location', vec3_dtype),
                           align=True)
 
 
-class SimulationStep(ABC):
-    @abstractmethod
-    def simulate(self, sim_data: particle_simulator.SimulationData, particles: accel.ParticleData, forces, locations):
-        pass
-
-
-class GravityStep(SimulationStep):
-    def simulate(self, sim_data: particle_simulator.SimulationData, particles: accel.ParticleData, forces, locations):
-        physics = sim_data.settings.physics
-        gravity = physics.gravity
-        # Calculation
-        # Project gravity onto normal vector
-        # We don't need to divide by the square length of normal, since this is a normalized vector.
-        unormal = numpyutils.unstructured(particles.normal)
-        factor = unormal.dot(gravity)
-        ortho_force = unormal * factor[:, np.newaxis]
-        # The force on the plane is then just simple vector subtraction
-        plane_force = np.array(gravity)[np.newaxis, :] - ortho_force
-        # factor is the inverse of what we need here, since the normal is pointing to the outside of the surface,
-        # but friction only applies if force is applied towards the surface. Hence we use (1+x) instead of (1-x)
-        friction = np.clip(1+physics.friction_coefficient*factor/numpyutils.vec_length(plane_force), 0, 1)
-        forces += plane_force * friction[:, np.newaxis]
-
-
-class DragForce (SimulationStep):
-    def simulate(self, sim_data: particle_simulator.SimulationData, particles: accel.ParticleData, forces, locations):
-        pass
-
-
 class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
     """ This particle simulator is using the CPU to simulate the particles. """
-    
+
     def __init__(self, context: bpy.types.Context):
         super().__init__(context)
         self._particles = accel.ParticleData()
-        self._physics_steps = [GravityStep()]
+        self._physics_steps = [gravitystep.GravityStep(), repelstep.RepelStep(), frictionstep.FrictionStep()]
         self.hashed_grid = accel.HashedGrid(0.001)
+        self._new_particles = None
 
     def shutdown(self):
         pass
@@ -108,30 +73,35 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         self._particles.resize(0)
 
     def simulate(self, sim_data: particle_simulator.SimulationData):
-        # Data initialization
-        # -------------------
-        p = self._particles
-        forces = np.zeros((self.num_particles, 3), float32_dtype)
-        locations = np.copy(p.location)
-        # Apply simulation steps
-        # ----------------------
-        for step in self._physics_steps:
-            step.simulate(sim_data, p, forces, locations)
-        # Improved Euler (midpoint) integration step
-        # ------------------------------------------
-        ulocation = numpyutils.unstructured(p.location)
-        uspeed = numpyutils.unstructured(p.speed)
-        uacceleration = numpyutils.unstructured(p.acceleration)
-        new_acceleration = forces / p.mass[:,np.newaxis]
-        half_timestep = 0.5 * sim_data.timestep
-        new_speed = uspeed + half_timestep * (uacceleration + new_acceleration)
-        new_location = ulocation + half_timestep * (uspeed + new_speed)
-        # Last step assign the new computed values
-        p.acceleration = numpyutils.to_structured(new_acceleration, vec3_dtype)
-        p.speed = numpyutils.to_structured(new_speed, vec3_dtype)
-        p.location = numpyutils.to_structured(new_location, vec3_dtype)
-        p.age += sim_data.timestep
-        self._particles.del_dead()
+        if self.num_particles > 0:
+            # Data initialization
+            # -------------------
+            p = self._particles
+            forces = np.zeros((self.num_particles, 3), float32_dtype)
+            new_particles = accel.ParticleData()
+            sim_data.hashed_grid = self.hashed_grid
+            # Apply simulation steps
+            # ----------------------
+            for step in self._physics_steps:
+                step.simulate(sim_data, p, forces, new_particles)
+            # Improved Euler (midpoint) integration step
+            # ------------------------------------------
+            ulocation = numpyutils.unstructured(p.location)
+            uspeed = numpyutils.unstructured(p.speed)
+            uacceleration = numpyutils.unstructured(p.acceleration)
+            new_acceleration = forces / p.mass[:, np.newaxis]
+            half_timestep = 0.5 * sim_data.timestep
+            new_speed = uspeed + half_timestep * (uacceleration + new_acceleration)
+            new_location = ulocation + half_timestep * (uspeed + new_speed)
+            # Last step assign the new computed values
+            p.acceleration = numpyutils.to_structured(new_acceleration, vec3_dtype)
+            p.speed = numpyutils.to_structured(new_speed, vec3_dtype)
+            p.location = numpyutils.to_structured(new_location, vec3_dtype)
+            p.age += sim_data.timestep
+            self._particles.del_dead()
+        if(self._new_particles is not None):
+            self._particles.append(self._new_particles)
+            self._new_particles = None
         self._update_location_dependent_variables(sim_data.paint_mesh)
         settings = sim_data.settings
         age_size_factor = max(1, settings.particle_size_age_factor)
@@ -161,8 +131,9 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         mass_max = painticle_settings.mass + painticle_settings.mass_random
         max_age_min = painticle_settings.max_age - painticle_settings.max_age_random
         max_age_max = painticle_settings.max_age + painticle_settings.max_age_random
-        return self._particles.add_particles_from_rays(ray_origins, ray_directions, matrix_inv, bvh,
-                                                       [speed, speed], [speed_random, speed_random, speed_random],
-                                                       [size_min, size_max], [mass_min, mass_max],
-                                                       [max_age_min, max_age_max],
-                                                       brush_color[:], painticle_settings.color_random.hsv)
+        self._new_particles = accel.ParticleData()
+        self._new_particles.add_particles_from_rays(ray_origins, ray_directions, matrix_inv, bvh,
+                                                    [speed, speed], [speed_random, speed_random, speed_random],
+                                                    [size_min, size_max], [mass_min, mass_max],
+                                                    [max_age_min, max_age_max],
+                                                    brush_color[:], painticle_settings.color_random.hsv)

@@ -1,5 +1,5 @@
 from numpy import lib
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 import platform
 import os
 import sys
@@ -79,7 +79,7 @@ def setup_package():
     setup(name='painticle',
           version=get_addon_version(),
           description='The blender PAINTicle addon',
-          packages=['painticle'],
+          packages=find_packages(include=["painticle*"]),
           ext_modules=[native_module],
           package_data={
             "painticle": ["shaders/*.glsl", "dependencies.txt"]

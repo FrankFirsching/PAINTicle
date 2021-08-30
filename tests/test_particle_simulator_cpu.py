@@ -22,8 +22,8 @@ import numpy as np
 
 from . import tstutils
 
-from painticle import particle_simulator, trianglemesh
-from painticle import particle_simulator_cpu
+from painticle.sim import particle_simulator, particle_simulator_cpu
+from painticle import trianglemesh
 from painticle import numpyutils
 
 min_tol = 1e-6
@@ -33,6 +33,7 @@ min_tol = 1e-6
 def test_mesh():
     tstutils.open_file("particle_test.blend")
     return bpy.data.objects['test_object']
+
 
 def test_particle_simulator():
     context = tstutils.get_default_context()

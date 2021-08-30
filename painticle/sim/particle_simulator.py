@@ -23,8 +23,8 @@ from abc import abstractmethod
 import bpy
 import mathutils
 
-from . import trianglemesh
-from . import settings
+from .. import trianglemesh
+from .. import settings
 
 
 class SourceInput:
@@ -44,6 +44,7 @@ class SimulationData:
         self.settings = settings
         self.paint_mesh = paint_mesh
         self.source_input = source_input
+        self.hashed_grid = None
 
 
 class ParticleSimulator(ABC):

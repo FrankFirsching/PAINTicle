@@ -61,6 +61,10 @@ public:
     const T& operator[](size_t i) const
     { return m_data[i]; }
 
+    //! Access the i-th element
+    T& operator[](size_t i)
+    { return m_data[i]; }
+
     //! Access the last element
     const T& back() const
     { return m_data.back(); }

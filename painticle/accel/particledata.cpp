@@ -18,6 +18,8 @@
 
 BEGIN_PAINTICLE_NAMESPACE
 
+std::default_random_engine ParticleData::m_generator;
+
 ParticleData::ParticleData()
 : location("location"),
   acceleration("acceleration"),

@@ -29,6 +29,8 @@
 
 #include <tbb/parallel_for.h>
 
+#include <algorithm>
+
 using namespace painticle;
 
 namespace {
@@ -200,6 +202,83 @@ void setParticleFieldData(ParticleField<T>& f, pybind11::array_t<T> other)
     }
 }
 
+inline float smoothstep(float edge0, float edge1, float x)
+{
+    // Scale, bias and saturate x to 0..1 range
+    x = (x - edge0) / (edge1 - edge0);
+    if(edge0>edge1)
+        x = -x;
+    x = x<0.0f ? 0.0f : (x>1.0f ? 1.0f : x);
+    // Evaluate polynomial
+    return x * x * (3 - 2 * x);
+}
+
+#define COULOMB_FORCE
+
+pybind11::array_t<Vec3f> repelForces_py(const HashedGrid& grid, ParticleData& particles, float timeStep)
+{
+    if(grid.numParticles() != particles.location.length())
+        throw std::runtime_error("Incompatible grid and particles. Both need to represent the same particles.");
+    
+    size_t numParticles = grid.numParticles();
+    pybind11::array_t<Vec3f> result(numParticles);
+    auto forces = toMemView(result);
+    const auto& cellOffsets = grid.cellOffsets();
+    const auto& sortedParticleIDs = grid.sortedParticleIDs();
+    BEGIN_PARALLEL_FOR(i, grid.numParticles()) {
+        Vec3f force(0,0,0);
+        Vec3f particlePos = particles.location[i];
+        float particleSize = particles.size[i];
+        Vec3f mixColor(0,0,0);
+        Vec3i gridCoord = grid.gridCoord(particlePos);
+        float numInteractions = 0.0;
+        for(int x=-1; x<=1; ++x) {
+            for(int y=-1; y<=1; ++y) {
+                for(int z=-1; z<=1; ++z) {
+                    Vec3i localCoord = gridCoord + Vec3i(x,y,z);
+                    uint32_t localHash = grid.hashGrid(localCoord);
+                    auto offset = cellOffsets[localHash];
+                    if(offset==ID_NONE)
+                        continue;
+
+                    while(offset<numParticles && sortedParticleIDs[offset].cellID == localHash) {
+                        ID particleID = sortedParticleIDs[offset].particleID;
+                        if(particleID!=i) {
+                            Vec3f localPos = particles.location[particleID];
+                            float localSize = particles.size[particleID];
+                            Vec3f localColor = particles.color[particleID];
+                            Vec3f diff = particlePos-localPos;
+                            float distanceSqr = diff.sqrLength();
+                            float maxDist = particleSize+localSize;
+                            if(distanceSqr>0 && distanceSqr<maxDist*maxDist) {
+                                float distance = sqrt(distanceSqr);
+                                Vec3f diffNorm = diff / distance;
+#ifndef COULOMB_FORCE
+                                const factor = (10-10*smoothstep(0, maxDist, distance));
+#else                                
+                                const float k = 0.001;
+                                float factor = std::min(10.0f, k/distanceSqr);
+#endif
+                                force += factor*diffNorm;
+                                mixColor += factor*localColor;
+                                numInteractions += factor;
+                            }
+                        }
+                        ++offset;
+                    }
+                }
+            }
+        }
+        forces[i] = force;
+        if(numInteractions>0.0f) {
+            const float mixFactor = 1 - 1/(timeStep+1);
+            particles.color[i] = (1-mixFactor)*particles.color[i] + (mixFactor/numInteractions) * mixColor;
+        }
+    } END_PARALLEL_FOR
+
+    return result;
+}
+
 }
 
 PYBIND11_NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
@@ -265,7 +344,7 @@ PYBIND11_MODULE(accel, m) {
     m.attr("num_hashed_grid_entries") = py::int_(HashedGrid::NUM_HASHED_GRID_ENTRIES);
     m.attr("id_none") = py::int_(ID_NONE);
 
-
+    m.def("repel_forces", &repelForces_py, "Calculate repulsion forces between the particles");
     m.def("build_bvh", &buildBVH_py, "Build the BVH acceleration structure");
     m.def("rgb2hsv", &rgb2hsv_py, "Convert a numpy array of colors from rgb to hsv");
     m.def("hsv2rgb", &hsv2rgb_py, "Convert a numpy array of colors from rgb to hsv");
