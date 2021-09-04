@@ -56,7 +56,7 @@ def test_particle_creation(test_mesh):
     simulator.add_particles_from_rays(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
                                       np.array([(-1, 0, 0)], dtype=numpyutils.float32_dtype),
                                       paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
-    p = simulator._particles
+    p = simulator._new_particles
     assert p is not None
     assert p.num_particles == 1
     assert tstutils.is_close_vec(p.location[0], (1, 0.2, 0.3), min_tol)
@@ -73,7 +73,7 @@ def test_particle_creation(test_mesh):
     simulator.add_particles_from_rays(np.array([(0.3, 0.4, 2)], dtype=numpyutils.float32_dtype),
                                       np.array([(0, 0, -1)], dtype=numpyutils.float32_dtype),
                                       paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
-    p = simulator._particles
+    p = simulator._new_particles
     assert p is not None
     assert p.num_particles == 2
 
@@ -90,7 +90,8 @@ def test_particle_simulation(test_mesh):
     simulator.add_particles_from_rays(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
                                       np.array([(-1, 0, 0)], dtype=numpyutils.float32_dtype),
                                       paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
-    sim_data = particle_simulator.SimulationData(1, painticle_settings, paint_mesh, None)
-    simulator.simulate(sim_data)
-    assert tstutils.is_close_vec(simulator._particles.location[0], (1, 0.2, 0.25095), min_tol)
+    sim_data = particle_simulator.SimulationData(0.1, painticle_settings, paint_mesh, None)
+    simulator.simulate(sim_data)  # Once for adding the particle to the list of simulated ones
+    simulator.simulate(sim_data)  # And once for really simulating a timestep
+    assert tstutils.is_close_vec(simulator._particles.location[0], (1, 0.2, 0.26457503), min_tol)
     assert tstutils.is_close(simulator._particles.age[0], sim_data.timestep, min_tol)

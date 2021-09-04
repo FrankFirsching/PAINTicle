@@ -93,6 +93,7 @@ class ParticlePaintMainPanel(ParticlePaintPanel, bpy.types.Panel):
         layout.prop(settings, "max_age")
         layout.prop(settings, "max_age_random")
         layout.prop(settings, "color_random")
+        layout.prop(settings, "repulsion_factor")
         layout.prop(settings, "stop_painting_on_mouse_release")
 
 
@@ -109,5 +110,7 @@ class ParticlePaintPhysicsPanel(ParticlePaintPanel, bpy.types.Panel):
         layout.prop(physics, "gravity")
         layout.prop(physics, "initial_speed")
         layout.prop(physics, "initial_speed_random")
+        layout.prop(physics, "drag_coefficient")
         layout.prop(physics, "friction_coefficient")
         layout.prop(physics, "max_time_step")
+        layout.prop(physics, "sim_sub_steps")

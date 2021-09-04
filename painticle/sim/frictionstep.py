@@ -39,4 +39,4 @@ class FrictionStep(simulationstep.SimulationStep):
         # factor is the inverse of what we need here, since the normal is pointing to the outside of the surface,
         # but friction only applies if force is applied towards the surface. Hence we use (1+x) instead of (1-x)
         friction = np.clip(1+physics.friction_coefficient*factor/numpyutils.vec_length(plane_force), 0, 1)
-        forces = plane_force * friction[:, np.newaxis]
+        return plane_force * friction[:, np.newaxis]

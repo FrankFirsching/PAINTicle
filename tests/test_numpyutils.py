@@ -49,3 +49,12 @@ def test_length():
     assert x.size == n
     for i in range(x.size):
         assert y[i] == 3, f"on element i={i}"
+
+
+def test_project_vector_onto_plane():
+    v = np.array([(1, 2, 3), (1, 2, 3), (1, 2, 3), (1, 2, 3)], dtype=numpyutils.vec3_dtype)
+    n = np.array([(1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 1)], dtype=numpyutils.vec3_dtype)
+    x = numpyutils.project_vector_onto_plane(v, n)
+    ref = [[0.,  2.,  3.], [ 1.,  0.,  3.],  [ 1.,  2.,  0.],  [-1.,  0.,  1.]]
+    for i, r in enumerate(ref):
+        assert tstutils.is_close_vec(r, x[i], min_tol), f"on element i={i}"

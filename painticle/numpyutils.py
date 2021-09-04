@@ -60,3 +60,14 @@ def vec_dot(a,b):
     ua = unstructured(a)
     ub = unstructured(b)
     return np.einsum('ij,ij->i', ua, ub)
+
+
+def project_vector_onto_plane(v, n):
+    """
+    Projects the points with coordinates v onto the plane
+    defined by normal n (a*x + b*y + c*z = 0)
+    """
+    uv = unstructured(v)
+    un = unstructured(n)
+    factor = vec_dot(v, n) / vec_dot(n, n)
+    return uv - factor[:, None] * un

@@ -35,7 +35,8 @@ Forces = np.array
 
 class SimulationStep(ABC):
     @abstractmethod
-    def simulate(self, sim_data: SimulationData, particles: ParticleData, forces: Forces, new_particles: ParticleData):
+    def simulate(self, sim_data: SimulationData, particles: ParticleData, forces: Forces,
+                 new_particles: ParticleData) -> Forces:
         pass
 
     

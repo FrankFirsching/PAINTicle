@@ -19,9 +19,18 @@
 
 from . import simulationstep
 
+from .. import numpyutils
 
-class DragForceStep(simulationstep.SimulationStep):
+import numpy as np
+
+
+class DragStep(simulationstep.SimulationStep):
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
                  forces: simulationstep.Forces, new_particles: simulationstep.ParticleData):
-        # TODO: Implement
-        pass
+        physics = sim_data.settings.physics
+        uspeed = numpyutils.unstructured(particles.speed)
+        usize = numpyutils.unstructured(particles.size)
+        avg_particle_size_sqr = sim_data.settings.particle_size * sim_data.settings.particle_size
+        usize_sqr = usize * usize / avg_particle_size_sqr
+        factor = physics.drag_coefficient * usize_sqr
+        return forces - factor[:, np.newaxis] * uspeed

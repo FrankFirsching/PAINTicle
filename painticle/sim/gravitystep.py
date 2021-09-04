@@ -19,10 +19,14 @@
 
 from . import simulationstep
 
+from .. import numpyutils
+
+import numpy as np
+
 
 class GravityStep(simulationstep.SimulationStep):
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
-                 forces: simulationstep.Forces, new_particles: simulationstep.ParticleData):
-        physics = sim_data.settings.physics
-        gravity = physics.gravity
-        forces += gravity
+                 forces: simulationstep.Forces, new_particles: simulationstep.ParticleData) -> simulationstep.Forces:
+        gravity = np.array(sim_data.settings.physics.gravity)
+        mass = numpyutils.unstructured(particles.mass)
+        return forces + mass[:, np.newaxis] * gravity[np.newaxis, :]

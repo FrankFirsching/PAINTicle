@@ -30,6 +30,12 @@ class Physics(PropertyGroup):
                                  subtype="ACCELERATION", unit="ACCELERATION",
                                  options=set())
 
+    drag_coefficient: FloatProperty(name="Drag",
+                                    description="The drag coefficient (howm much slows down air drag).\n" +
+                                                "The drag coefficient is normalized according to the average "+
+                                                "particle size.",
+                                    min=0.0, soft_max=50, default=10, options=set())
+
     friction_coefficient: FloatProperty(name="Friction",
                                         description="The friction coefficient (how sticky is the surface).",
                                         min=0.0, soft_max=0.1, default=0.01, options=set())
@@ -45,3 +51,8 @@ class Physics(PropertyGroup):
     max_time_step: FloatProperty(name="Max. timestep",
                                  description="The maximum time step used for the simulation.",
                                  default=0.04, options=set())
+
+    sim_sub_steps: IntProperty(name="Simulation substeps",
+                               description="The number of substeps to perform integration of the movement for the " +
+                                           "particles.",
+                               default=3, min=1, soft_max=16, options=set())

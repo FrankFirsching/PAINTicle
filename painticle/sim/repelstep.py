@@ -25,8 +25,9 @@ from .. import numpyutils
 
 class RepelStep(simulationstep.SimulationStep):
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
-                 forces: simulationstep.Forces, new_particles: simulationstep.ParticleData):
-        repel_forces = accel.repel_forces(sim_data.hashed_grid, particles, sim_data.timestep)
+                 forces: simulationstep.Forces, new_particles: simulationstep.ParticleData) -> simulationstep.Forces:
+        factor = sim_data.settings.repulsion_factor
+        repel_forces = accel.repel_forces(sim_data.hashed_grid, particles, factor, sim_data.timestep)
         urepel_forces = numpyutils.unstructured(repel_forces)
         uforces = numpyutils.unstructured(forces)
-        uforces += urepel_forces
+        return uforces + urepel_forces

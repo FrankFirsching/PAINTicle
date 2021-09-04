@@ -215,7 +215,8 @@ inline float smoothstep(float edge0, float edge1, float x)
 
 #define COULOMB_FORCE
 
-pybind11::array_t<Vec3f> repelForces_py(const HashedGrid& grid, ParticleData& particles, float timeStep)
+pybind11::array_t<Vec3f> repelForces_py(const HashedGrid& grid, ParticleData& particles,
+                                        float repulsionFactor, float timeStep)
 {
     if(grid.numParticles() != particles.location.length())
         throw std::runtime_error("Incompatible grid and particles. Both need to represent the same particles.");
@@ -229,6 +230,7 @@ pybind11::array_t<Vec3f> repelForces_py(const HashedGrid& grid, ParticleData& pa
         Vec3f force(0,0,0);
         Vec3f particlePos = particles.location[i];
         float particleSize = particles.size[i];
+        float particleMass = particles.mass[i];
         Vec3f mixColor(0,0,0);
         Vec3i gridCoord = grid.gridCoord(particlePos);
         float numInteractions = 0.0;
@@ -254,11 +256,12 @@ pybind11::array_t<Vec3f> repelForces_py(const HashedGrid& grid, ParticleData& pa
                                 float distance = sqrt(distanceSqr);
                                 Vec3f diffNorm = diff / distance;
 #ifndef COULOMB_FORCE
-                                const factor = (10-10*smoothstep(0, maxDist, distance));
+                                float factor = particleMass*(1-smoothstep(0, maxDist, distance));
 #else                                
                                 const float k = 0.001;
-                                float factor = std::min(10.0f, k/distanceSqr);
+                                float factor = std::min(10.0f*particleMass, k/distanceSqr);
 #endif
+                                factor *= repulsionFactor;
                                 force += factor*diffNorm;
                                 mixColor += factor*localColor;
                                 numInteractions += factor;
