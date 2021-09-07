@@ -218,8 +218,11 @@ inline float smoothstep(float edge0, float edge1, float x)
 pybind11::array_t<Vec3f> repelForces_py(const HashedGrid& grid, ParticleData& particles,
                                         float repulsionFactor, float timeStep)
 {
-    if(grid.numParticles() != particles.location.length())
-        throw std::runtime_error("Incompatible grid and particles. Both need to represent the same particles.");
+    if(grid.numParticles() != particles.location.length()) {
+        throw std::runtime_error("Incompatible grid and particles. Both need to represent the same particles: "+
+                                 std::to_string(grid.numParticles()) + " vs. " +
+                                 std::to_string(particles.location.length()));
+    }
     
     size_t numParticles = grid.numParticles();
     pybind11::array_t<Vec3f> result(numParticles);
@@ -338,6 +341,7 @@ PYBIND11_MODULE(accel, m) {
         .def("hash_coord", &HashedGrid::hashCoord)
         .def("hash_grid", &HashedGrid::hashGrid)
         .def("build", &build_hashedGrid)
+        .def("clear", &HashedGrid::clear)
         .def_property_readonly("sorted_particle_ids",
                                [](HashedGrid& g) -> py::array
                                { return getVector(g.sortedParticleIDs()); } )

@@ -15,8 +15,8 @@
 
 # <pep8 compliant>
 
+from .sim.particle_simulator import Interactions
 import bpy
-from mathutils import Vector
 
 import cProfile
 import pstats
@@ -57,6 +57,7 @@ class PaintOperator(bpy.types.Operator):
         self._timer = None
         self.lastcall = 0
         self.pr = None
+        self._interaction_flags = Interactions.NONE
 
     @classmethod
     def poll(cls, context):
@@ -67,12 +68,13 @@ class PaintOperator(bpy.types.Operator):
         """ Callback, if some event was happening """
 
         mouseOutsideOfArea = self.isMouseOutsideOfArea(context.area, event)
-        if not self._left_mouse_pressed and mouseOutsideOfArea and event.type != 'TIMER':
+        if self._interaction_flags != Interactions.NONE and mouseOutsideOfArea and event.type != 'TIMER':
             # Ignore everything, if not painting and outside
             return {'PASS_THROUGH'}
 
         if event.type == 'MOUSEMOVE':
-            if self._left_mouse_pressed:
+            if self._particles.numParticles() > 0:
+                self._particles.interact(context, event, self._interaction_flags)
                 # Keep the tool running
                 return {'RUNNING_MODAL'}
         elif event.type == 'TIMER':
@@ -80,22 +82,24 @@ class PaintOperator(bpy.types.Operator):
             currenttime = time.time_ns()
             delta_t = self.calc_time_step(currenttime, settings.physics.max_time_step)
             self.lastcall = currenttime
-            if self._left_mouse_pressed:
-                self._particles.shoot(context, event, delta_t, settings)
             self._particles.move_particles(delta_t, settings)
             self._particles.paint_particles(delta_t)
-            if not settings.stop_painting_on_mouse_release and not self._left_mouse_pressed:
+            if not settings.stop_painting_on_mouse_release and self._interaction_flags == Interactions.NONE:
                 if self._particles.numParticles() == 0:
                     self.setTimer(context, False)
 
         elif event.type == 'LEFTMOUSE':
             # Track the mouse press state
-            self._left_mouse_pressed = (event.value == "PRESS")
-            if self._left_mouse_pressed:
+            if event.value == "PRESS":
+                self._interaction_flags |= Interactions.EMIT_PARTICLES
+            else:
+                self._interaction_flags &= ~Interactions.EMIT_PARTICLES
+            if self._interaction_flags & Interactions.EMIT_PARTICLES:
+                self._particles.clear_particles()
+                self._particles.start_interacting(context, event, self._interaction_flags)
+                self.lastcall = time.time_ns()
                 self.startProfile()
                 self.setTimer(context, True)
-                self.lastcall = time.time_ns()
-                self._particles.clear_particles()
             else:
                 settings = context.scene.painticle_settings
                 if settings.stop_painting_on_mouse_release:
@@ -159,7 +163,7 @@ class PaintOperator(bpy.types.Operator):
             if rv3d.view_perspective == 'CAMERA':
                 rv3d.view_perspective = 'PERSP'
 
-            self._left_mouse_pressed = False
+            self._interaction_flags = Interactions.NONE
             self._particles = painticle.particles.Particles(context)
 
             context.window_manager.modal_handler_add(self)

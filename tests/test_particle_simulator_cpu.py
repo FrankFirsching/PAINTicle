@@ -35,17 +35,6 @@ def test_mesh():
     return bpy.data.objects['test_object']
 
 
-def test_particle_simulator():
-    context = tstutils.get_default_context()
-    simulator = particle_simulator_cpu.ParticleSimulatorCPU(context)
-    assert simulator is not None
-    assert simulator.num_particles == 0
-    new_particle = simulator.create_uninitialized_particles(1)
-    simulator.add_particles(new_particle)
-    assert simulator.num_particles == 1
-    simulator.shutdown()
-
-
 def test_particle_creation(test_mesh):
     global min_tol
     context = tstutils.get_default_context()
@@ -53,10 +42,10 @@ def test_particle_creation(test_mesh):
     simulator = particle_simulator_cpu.ParticleSimulatorCPU(context)
     painticle_settings = context.scene.painticle_settings
     # Add one particle
-    simulator.add_particles_from_rays(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
-                                      np.array([(-1, 0, 0)], dtype=numpyutils.float32_dtype),
-                                      paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
-    p = simulator._new_particles
+    simulator.add_test_particles(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
+                                 np.array([(-1, 0, 0)], dtype=numpyutils.float32_dtype),
+                                 paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
+    p = simulator._particles
     assert p is not None
     assert p.num_particles == 1
     assert tstutils.is_close_vec(p.location[0], (1, 0.2, 0.3), min_tol)
@@ -70,10 +59,10 @@ def test_particle_creation(test_mesh):
     assert tstutils.is_close(p.max_age[0], painticle_settings.max_age, painticle_settings.max_age_random)
     assert tstutils.is_close_vec(p.color[0], (0.1, 0.2, 0.3), min_tol)
     # Add another particle
-    simulator.add_particles_from_rays(np.array([(0.3, 0.4, 2)], dtype=numpyutils.float32_dtype),
-                                      np.array([(0, 0, -1)], dtype=numpyutils.float32_dtype),
-                                      paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
-    p = simulator._new_particles
+    simulator.add_test_particles(np.array([(0.3, 0.4, 2)], dtype=numpyutils.float32_dtype),
+                                 np.array([(0, 0, -1)], dtype=numpyutils.float32_dtype),
+                                 paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
+    p = simulator._particles
     assert p is not None
     assert p.num_particles == 2
 
@@ -87,11 +76,11 @@ def test_particle_simulation(test_mesh):
     painticle_settings.particle_size_random = 0
     painticle_settings.mass_random = 0
     painticle_settings.max_age_random = 0
-    simulator.add_particles_from_rays(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
-                                      np.array([(-1, 0, 0)], dtype=numpyutils.float32_dtype),
-                                      paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
-    sim_data = particle_simulator.SimulationData(0.1, painticle_settings, paint_mesh, None)
-    simulator.simulate(sim_data)  # Once for adding the particle to the list of simulated ones
-    simulator.simulate(sim_data)  # And once for really simulating a timestep
+    simulator.add_test_particles(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
+                                 np.array([(-1, 0, 0)], dtype=numpyutils.float32_dtype),
+                                 paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
+    input = particle_simulator.SourceInput()
+    sim_data = particle_simulator.SimulationData(0.1, painticle_settings, paint_mesh, context, input)
+    simulator.simulate(sim_data)
     assert tstutils.is_close_vec(simulator._particles.location[0], (1, 0.2, 0.26457503), min_tol)
     assert tstutils.is_close(simulator._particles.age[0], sim_data.timestep, min_tol)

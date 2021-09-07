@@ -19,6 +19,8 @@
 
 import os
 
+import mathutils
+
 
 class Error(Exception):
     """ Base class for errors in this module """
@@ -40,6 +42,20 @@ def matrix_to_tuple(m):
 
 def apply_barycentrics(baries, a, b, c):
     return baries[0]*a + baries[1]*b + baries[2]*c
+
+
+def orthogonalize(x: mathutils.Vector):
+    w = x.normalized()
+    if abs(w.x) >= abs(w.y):
+        # W.x or W.z is the largest magnitude component, swap them
+        invLength = 1.0 / w.xz.length
+        u = mathutils.Vector((-w.z * invLength, 0.0, w.x * invLength))
+    else:
+        # W.y or W.z is the largest magnitude component, swap them
+        invLength = 1.0 / w.yz.length
+        u = mathutils.Vector((0.0, w.z * invLength, -w.y * invLength))
+    v = w.cross(u)
+    return u, v, w
 
 
 # We cache the git version, so we don't need to touch everytime the preferences panel draws down to the file-system

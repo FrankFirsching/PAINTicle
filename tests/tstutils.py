@@ -82,6 +82,7 @@ class FakeEvent(object):
     def __init__(self, x, y):
         self.mouse_x = x
         self.mouse_y = y
+        self.pressure = 1
 
 
 def get_fake_event(x=0, y=0):

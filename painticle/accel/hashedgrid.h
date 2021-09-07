@@ -37,6 +37,9 @@ public:
     //! Build the hashed grid from the positions
     void build(MemView<Vec3f> positions);
 
+    //! Clear the hashed grid
+    void clear();
+
     //! Query the voxel size we're using for the coordinate hashing
     inline float voxelSize() const;
 

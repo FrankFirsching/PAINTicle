@@ -33,6 +33,7 @@ class Particles:
     def __init__(self, context: bpy.types.Context, omit_painter=False):
         """ If omit_painter is True, paint_particles and undo_last_paint may not be called. """
         from . import particle_painter_gpu
+        self.context = context
         self.rnd = random.Random()
         self.paint_mesh = trianglemesh.TriangleMesh(context)
         self.matrix = self.paint_mesh.object.matrix_world.copy()
@@ -41,7 +42,7 @@ class Particles:
             self.painter = None
         else:
             self.painter = particle_painter_gpu.ParticlePainterGPU(context, self.simulator.hashed_grid)
-        self.last_shoot_time = 0
+        self.input_data = None
 
     def __del__(self):
         if self.painter is not None:
@@ -51,36 +52,26 @@ class Particles:
         """ Return the number of simulated particles """
         return self.simulator.num_particles
 
-    def shoot(self, context: bpy.types.Context, event, delta_t, painticle_settings):
-        """ Shoot particles according to the flow rate """
-        time_between_particles = 1/painticle_settings.flow_rate
-        self.last_shoot_time += delta_t
-        num_particles_to_shoot = int(self.last_shoot_time / time_between_particles)
-        ray_origins, ray_directions = self.create_ray_data(num_particles_to_shoot, context, event)
-        brush_color = self.get_brush_color(context)
-        self.simulator.add_particles_from_rays(ray_origins, ray_directions, self.paint_mesh.bvh, self.matrix,
-                                               brush_color, painticle_settings)
-        self.last_shoot_time -= num_particles_to_shoot*time_between_particles
+    def interact(self, context: bpy.types.Context, event, interactions: particle_simulator.Interactions):
+        self.update_input_data(context, event, interactions, False)
 
-    def create_ray_data(self, num_rays, context: bpy.types.Context, event):
-        ray_origins = []
-        ray_directions = []
+    def start_interacting(self, context: bpy.types.Context, event, interactions: particle_simulator.Interactions):
+        self.update_input_data(context, event, interactions, True)
+
+    def update_input_data(self, context: bpy.types.Context, event, interactions: particle_simulator.Interactions,
+                          reset_input_data: bool):
         brush_size = self.get_brush_size(context)
-        for _ in range(num_rays):
-            angle = 2*math.pi*self.rnd.random()
-            distance = brush_size*self.rnd.random()
-            offset_x = math.cos(angle)*distance
-            offset_y = math.sin(angle)*distance
-            ray_origin, ray_direction = self.get_ray(context,
-                                                     event.mouse_x+offset_x,
-                                                     event.mouse_y+offset_y)
-            ray_origins.append(ray_origin)
-            ray_directions.append(ray_direction)
-        return ray_origins, ray_directions
+        origin, direction, size = self.get_ray(context, event.mouse_x, event.mouse_y, brush_size)
+        pressure = event.pressure
+        if reset_input_data:
+            self.input_data = particle_simulator.SourceInput(origin, direction, size, interactions, pressure)
+        else:
+            self.input_data.updateData(origin, direction, size, interactions, pressure)
 
     def move_particles(self, deltaT, painticle_settings):
         """ Simulate gravity """
-        sim_data = particle_simulator.SimulationData(deltaT, painticle_settings, self.paint_mesh, None)
+        sim_data = particle_simulator.SimulationData(deltaT, painticle_settings, self.paint_mesh,
+                                                     self.context, self.input_data)
         self.simulator.simulate(sim_data)
 
     def paint_particles(self, time_step: float):
@@ -102,14 +93,16 @@ class Particles:
         """ Get the active brush size """
         return context.tool_settings.image_paint.brush.color
 
-    def get_ray(self, context: bpy.types.Context, x, y):
+    def get_ray(self, context: bpy.types.Context, x, y, brush_size):
         """ Get the ray under the mouse cursor """
         region = context.region
         rv3d = context.region_data
         coord = x-region.x, y-region.y
+        coord_border = coord[0]+brush_size, coord[1]
 
         # get the ray from the viewport and mouse
         ray_direction = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
+        ray_direction_brush_border = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord_border)
         ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
 
-        return ray_origin, ray_direction
+        return ray_origin, ray_direction, (ray_direction_brush_border-ray_direction).length

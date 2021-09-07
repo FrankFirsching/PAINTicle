@@ -21,7 +21,7 @@ from . import particle_simulator
 from .. import utils
 from .. import numpyutils
 from .. import accel
-from . import gravitystep, repelstep, dragstep, frictionstep
+from . import brushstep, rainstep, gravitystep, windstep, repelstep, dragstep, frictionstep
 import bpy
 import numpy as np
 
@@ -50,45 +50,42 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         super().__init__(context)
         self._particles = accel.ParticleData()
         self._physics_steps = [
+            brushstep.BrushStep(),
+            # rainstep.RainStep(),
             gravitystep.GravityStep(),
+            # windstep.WindStep(),
             repelstep.RepelStep(),
             dragstep.DragStep(),
             frictionstep.FrictionStep()
             ]
         self.hashed_grid = accel.HashedGrid(0.001)
-        self._new_particles = None
 
     def shutdown(self):
         pass
-
-    def add_particles(self, particles):
-        self._particles.append(particles)
 
     @property
     def num_particles(self):
         return self._particles.num_particles
 
-    def set_num_particles(self, num_particles):
-        self._particles.resize(num_particles)
-
-    def set_particle(self, i, particle):
-        self._particles[i] = particle
-
     def clear_particles(self):
         self._particles.resize(0)
+        self.hashed_grid.clear()
 
     def simulate(self, sim_data: particle_simulator.SimulationData):
+        # Data initialization
+        # -------------------
+        p = self._particles
+        assert p.num_particles == self.hashed_grid.num_particles
+        forces = np.zeros((p.num_particles, 3), float32_dtype)
+        new_particles = accel.ParticleData()
+        sim_data.hashed_grid = self.hashed_grid
+        # Apply simulation steps
+        # ----------------------
+        for step in self._physics_steps:
+            forces = step.simulate(sim_data, p, forces, new_particles)
+        # Perform simulation integration
+        # ------------------------------
         if self.num_particles > 0:
-            # Data initialization
-            # -------------------
-            p = self._particles
-            forces = np.zeros((self.num_particles, 3), float32_dtype)
-            new_particles = accel.ParticleData()
-            sim_data.hashed_grid = self.hashed_grid
-            # Apply simulation steps
-            # ----------------------
-            for step in self._physics_steps:
-                forces = step.simulate(sim_data, p, forces, new_particles)
             num_substeps = sim_data.settings.physics.sim_sub_steps
             for _ in range(num_substeps):
                 # Improved Euler (midpoint) integration step
@@ -106,11 +103,13 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
             # Last step assign the new computed values
             p.age += sim_data.timestep
             self._particles.del_dead()
-        if(self._new_particles is not None):
-            self._particles.append(self._new_particles)
-            self._new_particles = None
+        if new_particles is not None:
+            self._particles.append(new_particles)
         self._update_location_dependent_variables(sim_data.paint_mesh)
         settings = sim_data.settings
+        self.update_hashed_grid(settings)
+
+    def update_hashed_grid(self, settings):
         age_size_factor = max(1, settings.particle_size_age_factor)
         self.hashed_grid.voxel_size = (settings.particle_size + settings.particle_size_random) * age_size_factor
         self.hashed_grid.build(numpyutils.unstructured(self._particles.location))
@@ -122,13 +121,8 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         projected_speed = numpyutils.project_vector_onto_plane(self._particles.speed, self._particles.normal)
         self._particles.speed = numpyutils.to_structured(projected_speed, numpyutils.vec3_dtype)
 
-    def create_uninitialized_particles(self, num_particles):
-        particles = accel.ParticleData()
-        particles.resize(num_particles)
-        return particles
-
-    def add_particles_from_rays(self, ray_origins, ray_directions, bvh, object_transform, brush_color,
-                                painticle_settings):
+    def add_test_particles(self, ray_origins, ray_directions, bvh, object_transform, brush_color,
+                           painticle_settings):
         """ ray_origins and ray_directions need to be given in world space """
         matrix_inv = utils.matrix_to_tuple(object_transform.inverted())
         physics = painticle_settings.physics
@@ -140,10 +134,9 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         mass_max = painticle_settings.mass + painticle_settings.mass_random
         max_age_min = painticle_settings.max_age - painticle_settings.max_age_random
         max_age_max = painticle_settings.max_age + painticle_settings.max_age_random
-        if self._new_particles is None:
-            self._new_particles = accel.ParticleData()
-        self._new_particles.add_particles_from_rays(ray_origins, ray_directions, matrix_inv, bvh,
-                                                    [speed, speed], [speed_random, speed_random, speed_random],
-                                                    [size_min, size_max], [mass_min, mass_max],
-                                                    [max_age_min, max_age_max],
-                                                    brush_color[:], painticle_settings.color_random.hsv)
+        self._particles.add_particles_from_rays(ray_origins, ray_directions, matrix_inv, bvh,
+                                                [speed, speed], [speed_random, speed_random, speed_random],
+                                                [size_min, size_max], [mass_min, mass_max],
+                                                [max_age_min, max_age_max],
+                                                brush_color[:], painticle_settings.color_random.hsv)
+        self.update_hashed_grid(painticle_settings)

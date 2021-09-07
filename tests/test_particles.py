@@ -23,6 +23,7 @@ import bpy
 import time
 
 import painticle
+from painticle.sim import particle_simulator
 
 from . import tstutils
 
@@ -38,14 +39,18 @@ class SetupInfo(object):
 
 
 def sim_only(setup_info):
+    interaction = particle_simulator.Interactions.EMIT_PARTICLES
+    setup_info.particles.start_interacting(setup_info.context, setup_info.event, interaction)
     for i in range(100):
-        setup_info.particles.shoot(setup_info.context, setup_info.event, setup_info.delta_t, setup_info.settings)
+        setup_info.particles.interact(setup_info.context, setup_info.event, interaction)
         setup_info.particles.move_particles(setup_info.delta_t, setup_info.settings)
 
 
 def sim_and_paint(setup_info):
+    interaction = particle_simulator.Interactions.EMIT_PARTICLES
+    setup_info.particles.start_interacting(setup_info.context, setup_info.event, interaction)
     for i in range(100):
-        setup_info.particles.shoot(setup_info.context, setup_info.event, setup_info.delta_t, setup_info.settings)
+        setup_info.particles.interact(setup_info.context, setup_info.event, interaction)
         setup_info.particles.move_particles(setup_info.delta_t, setup_info.settings)
         setup_info.particles.paint_particles(setup_info.delta_t)
 

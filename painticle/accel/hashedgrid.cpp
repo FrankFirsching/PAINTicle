@@ -31,8 +31,6 @@ HashedGrid::~HashedGrid()
 
 void HashedGrid::build(MemView<Vec3f> positions)
 {
-    using namespace std;
-
     m_sortedParticleIDs.resize(positions.size());
 
     BEGIN_PARALLEL_FOR(i, positions.size()) {
@@ -62,6 +60,7 @@ void HashedGrid::build(MemView<Vec3f> positions)
     }
 
 #ifdef DEBUG_PRINT_HASHED_GRID_CONSTRUCTION
+    using namespace std;
     cout << "SortedParticleIDs:" << endl;
     size_t i = 0;
     for(auto x : m_sortedParticleIDs)
@@ -71,6 +70,11 @@ void HashedGrid::build(MemView<Vec3f> positions)
     for(auto x : m_cellOffsets)
         cout << i++ << ": " << x << endl;
 #endif
+}
+
+void HashedGrid::clear()
+{
+    m_sortedParticleIDs.clear();
 }
 
 void HashedGrid::setVoxelSize(float voxelSize)
