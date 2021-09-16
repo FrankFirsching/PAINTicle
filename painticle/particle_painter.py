@@ -22,7 +22,7 @@ from abc import abstractmethod
 
 import bpy
 
-from . import particles
+from .sim import particle_simulator
 
 
 class ParticlePainter(ABC):
@@ -33,8 +33,9 @@ class ParticlePainter(ABC):
 
     context = None
 
-    def __init__(self, context: bpy.types.Context):
+    def __init__(self, context: bpy.types.Context, simulator: particle_simulator.ParticleSimulator):
         self.context = context
+        self.simulator = simulator
 
     @abstractmethod
     def shutdown(self):
@@ -68,6 +69,6 @@ class ParticlePainter(ABC):
         active_object = self.get_active_object()
         return active_object.data if active_object is not None else None
 
-    def get_particle_settings(self):
+    def get_particle_size_age_factor(self):
         """ Get PAINTicle's settings from the scene """
-        return self.context.scene.painticle_settings
+        return self.simulator.emit_settings().particle_size_age_factor

@@ -17,27 +17,23 @@
 
 # <pep8 compliant>
 
-from . import particle_simulator
+from . import emitterstep
 from . import simulationstep
+from ..interaction import Interactions
 
 import bpy
-import random
 import math
 
 
-class BrushStep(simulationstep.SimulationStep):
-    def __init__(self):
-        self.last_shoot_time = 0
-        self.rnd = random.Random()
+class BrushStep(emitterstep.EmitterStep):
 
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
                  forces: simulationstep.Forces, new_particles: simulationstep.ParticleData) -> simulationstep.Forces:
         input = sim_data.source_input
-        if input.interactions & particle_simulator.Interactions.EMIT_PARTICLES and input.pressure > 0.0:
-            painticle_settings = sim_data.settings
+        if input.interactions & Interactions.EMIT_PARTICLES and input.pressure > 0.0:
             context = sim_data.context
             delta_t = sim_data.timestep
-            time_between_particles = 1/(painticle_settings.flow_rate * input.pressure)
+            time_between_particles = 1/(self.creation_settings.flow_rate * input.pressure)
             self.last_shoot_time += delta_t
             num_particles_to_shoot = int(self.last_shoot_time / time_between_particles)
             ray_origins, ray_directions = self.create_ray_data(num_particles_to_shoot, context, input)

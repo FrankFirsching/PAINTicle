@@ -21,12 +21,21 @@ from . import simulationstep
 
 from .. import numpyutils
 
+from bpy.props import FloatVectorProperty
 import numpy as np
 
 
 class GravityStep(simulationstep.SimulationStep):
+
+    gravity: FloatVectorProperty(name="Gravity",
+                                 description="The gravitational force applied to the particles.",
+                                 default=(0, 0, -9.81),
+                                 subtype="ACCELERATION", unit="ACCELERATION",
+                                 options=set())
+
+
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
                  forces: simulationstep.Forces, new_particles: simulationstep.ParticleData) -> simulationstep.Forces:
-        gravity = np.array(sim_data.settings.physics.gravity)
+        gravity = np.array(self.gravity)
         mass = numpyutils.unstructured(particles.mass)
         return forces + mass[:, np.newaxis] * gravity[np.newaxis, :]

@@ -26,10 +26,6 @@ import random
 
 
 class WindStep(simulationstep.SimulationStep):
-    def __init__(self):
-        self.last_shoot_time = 0
-        self.rnd = random.Random()
-
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
                  forces: simulationstep.Forces, new_particles: simulationstep.ParticleData) -> simulationstep.Forces:
         if sim_data.source_input is not None:

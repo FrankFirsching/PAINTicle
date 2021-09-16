@@ -20,7 +20,8 @@ from bpy.types import PropertyGroup
 from bpy.props import EnumProperty
 
 
-id = __package__
+# Get the root level module name as our ID
+id = __package__.split('.')[0]
 
 
 def get_instance(context):

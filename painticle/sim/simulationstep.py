@@ -18,12 +18,14 @@
 # <pep8 compliant>
 
 
-from abc import ABC
 from abc import abstractmethod
+
+from bpy.types import PropertyGroup
 
 from . import particle_simulator
 from .. import accel, utils
 
+import bpy.props
 import numpy as np
 
 
@@ -34,30 +36,15 @@ ParticleData = accel.ParticleData
 Forces = np.array
 
 
-class SimulationStep(ABC):
+class SimulationStep(PropertyGroup):
+    enabled: bpy.props.BoolProperty(name="Enabled", default=True, description="Turns the simulation step on or off",
+                                    options=set())
+
+    @abstractmethod
+    def initialize(self):
+        pass
+
     @abstractmethod
     def simulate(self, sim_data: SimulationData, particles: ParticleData, forces: Forces,
                  new_particles: ParticleData) -> Forces:
         pass
-
-    def create_particles(self, ray_origins, ray_directions, sim_data: SimulationData, new_particles: ParticleData):
-        """ ray_origins and ray_directions need to be given in world space """
-        object_transform = sim_data.paint_mesh.object.matrix_world.copy()
-        painticle_settings = sim_data.settings
-        brush_color = sim_data.context.tool_settings.image_paint.brush.color
-        bvh = sim_data.paint_mesh.bvh
-        matrix_inv = utils.matrix_to_tuple(object_transform.inverted())
-        physics = painticle_settings.physics
-        speed = physics.initial_speed
-        speed_random = 0.5 * physics.initial_speed * physics.initial_speed_random
-        size_min = painticle_settings.particle_size - painticle_settings.particle_size_random
-        size_max = painticle_settings.particle_size + painticle_settings.particle_size_random
-        mass_min = painticle_settings.mass - painticle_settings.mass_random
-        mass_max = painticle_settings.mass + painticle_settings.mass_random
-        max_age_min = painticle_settings.max_age - painticle_settings.max_age_random
-        max_age_max = painticle_settings.max_age + painticle_settings.max_age_random
-        new_particles.add_particles_from_rays(ray_origins, ray_directions, matrix_inv, bvh,
-                                              [speed, speed], [speed_random, speed_random, speed_random],
-                                              [size_min, size_max], [mass_min, mass_max],
-                                              [max_age_min, max_age_max],
-                                              brush_color[:], painticle_settings.color_random.hsv)

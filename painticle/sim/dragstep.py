@@ -21,16 +21,24 @@ from . import simulationstep
 
 from .. import numpyutils
 
+from bpy.props import FloatProperty
 import numpy as np
 
 
 class DragStep(simulationstep.SimulationStep):
+
+    drag_coefficient: FloatProperty(name="Drag",
+                                    description="The drag coefficient (howm much slows down air drag).\n" +
+                                                "The drag coefficient is normalized according to the average "+
+                                                "particle size.",
+                                    min=0.0, soft_max=50, default=10, options=set())
+
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
                  forces: simulationstep.Forces, new_particles: simulationstep.ParticleData):
-        physics = sim_data.settings.physics
         uspeed = numpyutils.unstructured(particles.speed)
         usize = numpyutils.unstructured(particles.size)
-        avg_particle_size_sqr = sim_data.settings.particle_size * sim_data.settings.particle_size
+        avg_particle_size = sim_data.emit_settings.particle_size
+        avg_particle_size_sqr = avg_particle_size * avg_particle_size
         usize_sqr = usize * usize / avg_particle_size_sqr
-        factor = physics.drag_coefficient * usize_sqr
+        factor = self.drag_coefficient * usize_sqr
         return forces - factor[:, np.newaxis] * uspeed

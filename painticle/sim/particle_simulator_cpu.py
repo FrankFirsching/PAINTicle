@@ -17,6 +17,7 @@
 
 # <pep8 compliant>
 
+from painticle.sim.emitterstep import EmitterStep
 from . import particle_simulator
 from .. import utils
 from .. import numpyutils
@@ -26,7 +27,7 @@ import bpy
 import numpy as np
 
 
-from painticle import trianglemesh
+from painticle import settings, trianglemesh
 from ..numpyutils import float32_dtype, vec2_dtype, vec3_dtype, col_dtype
 
 # This type needs to be conform to the definition of ParticleData in accel/particledata.h
@@ -49,19 +50,14 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
     def __init__(self, context: bpy.types.Context):
         super().__init__(context)
         self._particles = accel.ParticleData()
-        self._physics_steps = [
-            brushstep.BrushStep(),
-            # rainstep.RainStep(),
-            gravitystep.GravityStep(),
-            # windstep.WindStep(),
-            repelstep.RepelStep(),
-            dragstep.DragStep(),
-            frictionstep.FrictionStep()
-            ]
+        self._physics_steps = None
         self.hashed_grid = accel.HashedGrid(0.001)
 
     def shutdown(self):
         pass
+
+    def setup_steps(self):
+        self._physics_steps = self.context.scene.painticle_settings.brush.get_active_brush_steps()
 
     @property
     def num_particles(self):
@@ -70,6 +66,12 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
     def clear_particles(self):
         self._particles.resize(0)
         self.hashed_grid.clear()
+
+    def emit_settings(self):
+        for x in self._physics_steps:
+            if isinstance(x, EmitterStep):
+                return x.creation_settings
+
 
     def simulate(self, sim_data: particle_simulator.SimulationData):
         # Data initialization
@@ -106,10 +108,10 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
         if new_particles is not None:
             self._particles.append(new_particles)
         self._update_location_dependent_variables(sim_data.paint_mesh)
-        settings = sim_data.settings
-        self.update_hashed_grid(settings)
+        self.update_hashed_grid()
 
-    def update_hashed_grid(self, settings):
+    def update_hashed_grid(self):
+        settings = self.emit_settings()
         age_size_factor = max(1, settings.particle_size_age_factor)
         self.hashed_grid.voxel_size = (settings.particle_size + settings.particle_size_random) * age_size_factor
         self.hashed_grid.build(numpyutils.unstructured(self._particles.location))
@@ -125,18 +127,18 @@ class ParticleSimulatorCPU(particle_simulator.ParticleSimulator):
                            painticle_settings):
         """ ray_origins and ray_directions need to be given in world space """
         matrix_inv = utils.matrix_to_tuple(object_transform.inverted())
-        physics = painticle_settings.physics
-        speed = physics.initial_speed
-        speed_random = 0.5 * physics.initial_speed * physics.initial_speed_random
-        size_min = painticle_settings.particle_size - painticle_settings.particle_size_random
-        size_max = painticle_settings.particle_size + painticle_settings.particle_size_random
-        mass_min = painticle_settings.mass - painticle_settings.mass_random
-        mass_max = painticle_settings.mass + painticle_settings.mass_random
-        max_age_min = painticle_settings.max_age - painticle_settings.max_age_random
-        max_age_max = painticle_settings.max_age + painticle_settings.max_age_random
+        emit_settings = self.emit_settings()
+        speed = emit_settings.initial_speed
+        speed_random = 0.5 * emit_settings.initial_speed * emit_settings.initial_speed_random
+        size_min = emit_settings.particle_size - emit_settings.particle_size_random
+        size_max = emit_settings.particle_size + emit_settings.particle_size_random
+        mass_min = emit_settings.mass - emit_settings.mass_random
+        mass_max = emit_settings.mass + emit_settings.mass_random
+        max_age_min = emit_settings.max_age - emit_settings.max_age_random
+        max_age_max = emit_settings.max_age + emit_settings.max_age_random
         self._particles.add_particles_from_rays(ray_origins, ray_directions, matrix_inv, bvh,
                                                 [speed, speed], [speed_random, speed_random, speed_random],
                                                 [size_min, size_max], [mass_min, mass_max],
                                                 [max_age_min, max_age_max],
-                                                brush_color[:], painticle_settings.color_random.hsv)
-        self.update_hashed_grid(painticle_settings)
+                                                brush_color[:], emit_settings.color_random.hsv)
+        self.update_hashed_grid()

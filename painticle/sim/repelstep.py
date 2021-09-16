@@ -22,12 +22,19 @@ from . import simulationstep
 from .. import accel
 from .. import numpyutils
 
+from bpy.props import FloatProperty
+
 
 class RepelStep(simulationstep.SimulationStep):
+
+    repulsion_factor: FloatProperty(name="Repulsion factor",
+                                    description="A factor, that influences the repulsion effect between the particles.",
+                                    default=0.2, min=0, soft_max=2,
+                                    options=set())
+
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
                  forces: simulationstep.Forces, new_particles: simulationstep.ParticleData) -> simulationstep.Forces:
-        factor = sim_data.settings.repulsion_factor
-        repel_forces = accel.repel_forces(sim_data.hashed_grid, particles, factor, sim_data.timestep)
+        repel_forces = accel.repel_forces(sim_data.hashed_grid, particles, self.repulsion_factor, sim_data.timestep)
         urepel_forces = numpyutils.unstructured(repel_forces)
         uforces = numpyutils.unstructured(forces)
         return uforces + urepel_forces

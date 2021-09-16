@@ -14,14 +14,13 @@
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from . import operator
 from . import settings
-from . import settings_panel
-from . import physics
-from . import preferences
-from . import preferences_panel
-from . import utils
+from . import sim
+from . import ops
+from . import ui
+
 import bpy
+
 
 bl_info = {
     "name": "PAINTicle",
@@ -36,27 +35,24 @@ bl_info = {
 }
 
 classes = (
-    operator.PaintOperator,
-    physics.Physics,
-    settings.Settings,
-    settings_panel.ParticlePaintPresetsMenu,
-    settings_panel.AddPresetParticleSettings,
-    settings_panel.ParticlePaintMainPanel,
-    settings_panel.ParticlePaintPhysicsPanel,
-    preferences.Preferences,
-    preferences_panel.PreferencesPanel
+    *settings.all_settings,
+    *sim.all_steps,
+    *ops.all_operators,
+    *ui.all_ui
 )
 
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.painticle_settings = bpy.props.PointerProperty(type=settings.Settings)
-    operator.add_menu()
+    bpy.types.Scene.painticle_settings = bpy.props.PointerProperty(type=settings.core.Settings)
+    ops.paintop.add_menu()
+    ui.brushnodes.register_node_categories()
 
 
 def unregister():
-    operator.remove_menu()
+    ui.brushnodes.unregister_node_categories()
+    ops.paintop.remove_menu()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     del bpy.types.Scene.painticle_settings

@@ -17,20 +17,12 @@
 
 # <pep8 compliant>
 
-from . import brushstep
-from . import dragstep
-from . import frictionstep
-from . import gravitystep
-from . import rainstep
-from . import repelstep
-from . import windstep
+from . import paintop
+from . import setactivebrushop
+from . import createdefaultbrushtree
 
-all_steps = [
-    brushstep.BrushStep,
-    dragstep.DragStep,
-    frictionstep.FrictionStep,
-    gravitystep.GravityStep,
-    rainstep.RainStep,
-    repelstep.RepelStep,
-    windstep.WindStep
+all_operators = [
+    paintop.PaintOp,
+    setactivebrushop.SetActiveBrushOp,
+    createdefaultbrushtree.CreateDefaultBrushTree
 ]

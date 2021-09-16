@@ -18,9 +18,9 @@
 # <pep8 compliant>
 
 import bpy
-from . import utils
-from . import dependencies
-from . import preferences
+from .. import utils
+from .. import dependencies
+from ..settings import preferences
 
 
 class PreferencesPanel(bpy.types.AddonPreferences):

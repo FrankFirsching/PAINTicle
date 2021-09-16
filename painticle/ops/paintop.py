@@ -15,7 +15,6 @@
 
 # <pep8 compliant>
 
-from .sim.particle_simulator import Interactions
 import bpy
 
 import cProfile
@@ -23,7 +22,9 @@ import pstats
 import io
 import time
 
-import painticle.particles
+from .createdefaultbrushtree import create_default_brush_tree
+from ..interaction import Interactions
+from .. import particles
 
 
 def menu_draw(self, context):
@@ -45,7 +46,7 @@ def remove_menu():
 # This class is the blender operator interface. It cares about mouse and pen
 # handling. The real drawing is done in a different module: particles.
 # See there for the real painting logic.
-class PaintOperator(bpy.types.Operator):
+class PaintOp(bpy.types.Operator):
     """Paint on the object using particles"""
     bl_idname = "view3d.painticle"
     bl_label = "PAINTicle"
@@ -68,7 +69,7 @@ class PaintOperator(bpy.types.Operator):
         """ Callback, if some event was happening """
 
         mouseOutsideOfArea = self.isMouseOutsideOfArea(context.area, event)
-        if self._interaction_flags != Interactions.NONE and mouseOutsideOfArea and event.type != 'TIMER':
+        if self._interaction_flags == Interactions.NONE and mouseOutsideOfArea and event.type != 'TIMER':
             # Ignore everything, if not painting and outside
             return {'PASS_THROUGH'}
 
@@ -164,9 +165,11 @@ class PaintOperator(bpy.types.Operator):
                 rv3d.view_perspective = 'PERSP'
 
             self._interaction_flags = Interactions.NONE
-            self._particles = painticle.particles.Particles(context)
+            self._particles = particles.Particles(context)
 
             context.window_manager.modal_handler_add(self)
+            if context.scene.painticle_settings.brush is None:
+                create_default_brush_tree()
             return {'RUNNING_MODAL'}
         else:
             self.report({'WARNING'}, "Active space must be a View3d")

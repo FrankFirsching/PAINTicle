@@ -13,24 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with PAINTicle.  If not, see <http://www.gnu.org/licenses/>.
 
-# The particle painter, that's using the gpu directly
-
 # <pep8 compliant>
 
-from . import brushstep
-from . import dragstep
-from . import frictionstep
-from . import gravitystep
-from . import rainstep
-from . import repelstep
-from . import windstep
+from . import core
+from . import physics
+from . import brushtree
+from . import preferences
+from . import particlecreationsettings
 
-all_steps = [
-    brushstep.BrushStep,
-    dragstep.DragStep,
-    frictionstep.FrictionStep,
-    gravitystep.GravityStep,
-    rainstep.RainStep,
-    repelstep.RepelStep,
-    windstep.WindStep
+all_settings = [
+    brushtree.BrushTree,
+    physics.Physics,
+    core.Settings,
+    preferences.Preferences,
+    particlecreationsettings.ParticleCreationSettings
 ]

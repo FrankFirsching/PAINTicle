@@ -26,6 +26,7 @@ import random
 from . import trianglemesh
 from .sim import particle_simulator_cpu
 from .sim import particle_simulator
+from .interaction import Interactions, SourceInput
 
 
 class Particles:
@@ -41,7 +42,7 @@ class Particles:
         if omit_painter:
             self.painter = None
         else:
-            self.painter = particle_painter_gpu.ParticlePainterGPU(context, self.simulator.hashed_grid)
+            self.painter = particle_painter_gpu.ParticlePainterGPU(context, self.simulator)
         self.input_data = None
 
     def __del__(self):
@@ -52,25 +53,27 @@ class Particles:
         """ Return the number of simulated particles """
         return self.simulator.num_particles
 
-    def interact(self, context: bpy.types.Context, event, interactions: particle_simulator.Interactions):
+    def interact(self, context: bpy.types.Context, event, interactions: Interactions):
         self.update_input_data(context, event, interactions, False)
 
-    def start_interacting(self, context: bpy.types.Context, event, interactions: particle_simulator.Interactions):
+    def start_interacting(self, context: bpy.types.Context, event, interactions: Interactions):
         self.update_input_data(context, event, interactions, True)
+        self.simulator.setup_steps()
 
-    def update_input_data(self, context: bpy.types.Context, event, interactions: particle_simulator.Interactions,
+    def update_input_data(self, context: bpy.types.Context, event, interactions: Interactions,
                           reset_input_data: bool):
         brush_size = self.get_brush_size(context)
         origin, direction, size = self.get_ray(context, event.mouse_x, event.mouse_y, brush_size)
         pressure = event.pressure
         if reset_input_data:
-            self.input_data = particle_simulator.SourceInput(origin, direction, size, interactions, pressure)
+            self.input_data = SourceInput(origin, direction, size, interactions, pressure)
         else:
             self.input_data.updateData(origin, direction, size, interactions, pressure)
 
     def move_particles(self, deltaT, painticle_settings):
         """ Simulate gravity """
-        sim_data = particle_simulator.SimulationData(deltaT, painticle_settings, self.paint_mesh,
+        emit_settings = self.simulator.emit_settings()
+        sim_data = particle_simulator.SimulationData(deltaT, emit_settings, painticle_settings, self.paint_mesh,
                                                      self.context, self.input_data)
         self.simulator.simulate(sim_data)
 

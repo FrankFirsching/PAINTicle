@@ -17,20 +17,19 @@
 
 # <pep8 compliant>
 
-from . import brushstep
-from . import dragstep
-from . import frictionstep
-from . import gravitystep
-from . import rainstep
-from . import repelstep
-from . import windstep
+from . import brushnodes
+from . import brushtree
+from . import preferences_panel
+from . import settings_panel
 
-all_steps = [
-    brushstep.BrushStep,
-    dragstep.DragStep,
-    frictionstep.FrictionStep,
-    gravitystep.GravityStep,
-    rainstep.RainStep,
-    repelstep.RepelStep,
-    windstep.WindStep
+all_ui = [
+    *brushnodes.all_nodes,
+    brushtree.BrushSocket,
+    settings_panel.PAINTiclePresetsMenu,
+    settings_panel.PAINTicleBrushMenu,
+    settings_panel.AddPresetParticleSettings,
+    settings_panel.PAINTicleMainPanel,
+    settings_panel.PAINTicleBrushPanel,
+    settings_panel.PAINTiclePhysicsPanel,
+    preferences_panel.PreferencesPanel,
 ]

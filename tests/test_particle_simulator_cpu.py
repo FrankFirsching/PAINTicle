@@ -22,6 +22,7 @@ import numpy as np
 
 from . import tstutils
 
+from painticle.ops.createdefaultbrushtree import create_default_brush_tree
 from painticle.sim import particle_simulator, particle_simulator_cpu
 from painticle import trianglemesh
 from painticle import numpyutils
@@ -40,6 +41,10 @@ def test_particle_creation(test_mesh):
     context = tstutils.get_default_context()
     paint_mesh = trianglemesh.TriangleMesh(context)
     simulator = particle_simulator_cpu.ParticleSimulatorCPU(context)
+    create_default_brush_tree()
+    simulator.setup_steps()
+    emit_settings = simulator.emit_settings()
+    emit_settings.color_random = (0,0,0)
     painticle_settings = context.scene.painticle_settings
     # Add one particle
     simulator.add_test_particles(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
@@ -53,10 +58,10 @@ def test_particle_creation(test_mesh):
     assert tstutils.is_close_vec(p.speed[0], (0, 0, 0), min_tol)
     assert tstutils.is_close_vec(p.normal[0], (1, 0, 0), min_tol)
     assert tstutils.is_close_vec(p.uv[0], (0, 0), min_tol)
-    assert tstutils.is_close(p.size[0], painticle_settings.particle_size, painticle_settings.particle_size_random)
-    assert tstutils.is_close(p.mass[0], painticle_settings.mass, painticle_settings.mass_random)
+    assert tstutils.is_close(p.size[0], emit_settings.particle_size, emit_settings.particle_size_random)
+    assert tstutils.is_close(p.mass[0], emit_settings.mass, emit_settings.mass_random)
     assert tstutils.is_close(p.age[0], 0, min_tol)
-    assert tstutils.is_close(p.max_age[0], painticle_settings.max_age, painticle_settings.max_age_random)
+    assert tstutils.is_close(p.max_age[0], emit_settings.max_age, emit_settings.max_age_random)
     assert tstutils.is_close_vec(p.color[0], (0.1, 0.2, 0.3), min_tol)
     # Add another particle
     simulator.add_test_particles(np.array([(0.3, 0.4, 2)], dtype=numpyutils.float32_dtype),
@@ -72,15 +77,19 @@ def test_particle_simulation(test_mesh):
     context = tstutils.get_default_context(test_mesh)
     paint_mesh = trianglemesh.TriangleMesh(context)
     simulator = particle_simulator_cpu.ParticleSimulatorCPU(context)
+    create_default_brush_tree()
+    simulator.setup_steps()
     painticle_settings = context.scene.painticle_settings
-    painticle_settings.particle_size_random = 0
-    painticle_settings.mass_random = 0
-    painticle_settings.max_age_random = 0
+    emit_settings = simulator.emit_settings()
+    emit_settings.particle_size_random = 0
+    emit_settings.mass_random = 0
+    emit_settings.max_age_random = 0
     simulator.add_test_particles(np.array([(2, 0.2, 0.3)], dtype=numpyutils.float32_dtype),
                                  np.array([(-1, 0, 0)], dtype=numpyutils.float32_dtype),
                                  paint_mesh.bvh, mathutils.Matrix.Identity(4), (0.1, 0.2, 0.3), painticle_settings)
     input = particle_simulator.SourceInput()
-    sim_data = particle_simulator.SimulationData(0.1, painticle_settings, paint_mesh, context, input)
+    emit_settings = simulator.emit_settings()
+    sim_data = particle_simulator.SimulationData(0.1, emit_settings, painticle_settings, paint_mesh, context, input)
     simulator.simulate(sim_data)
     assert tstutils.is_close_vec(simulator._particles.location[0], (1, 0.2, 0.26457503), min_tol)
     assert tstutils.is_close(simulator._particles.age[0], sim_data.timestep, min_tol)

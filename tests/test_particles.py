@@ -23,7 +23,8 @@ import bpy
 import time
 
 import painticle
-from painticle.sim import particle_simulator
+from painticle.interaction import Interactions
+from painticle.ops.createdefaultbrushtree import create_default_brush_tree
 
 from . import tstutils
 
@@ -39,7 +40,7 @@ class SetupInfo(object):
 
 
 def sim_only(setup_info):
-    interaction = particle_simulator.Interactions.EMIT_PARTICLES
+    interaction = Interactions.EMIT_PARTICLES
     setup_info.particles.start_interacting(setup_info.context, setup_info.event, interaction)
     for i in range(100):
         setup_info.particles.interact(setup_info.context, setup_info.event, interaction)
@@ -47,7 +48,7 @@ def sim_only(setup_info):
 
 
 def sim_and_paint(setup_info):
-    interaction = particle_simulator.Interactions.EMIT_PARTICLES
+    interaction = Interactions.EMIT_PARTICLES
     setup_info.particles.start_interacting(setup_info.context, setup_info.event, interaction)
     for i in range(100):
         setup_info.particles.interact(setup_info.context, setup_info.event, interaction)
@@ -61,6 +62,7 @@ def sim_setup():
     bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
     test_mesh = bpy.data.objects['test_object']
     context = tstutils.get_default_context(test_mesh)
+    create_default_brush_tree()
     painticle_settings = bpy.context.scene.painticle_settings
     particles = painticle.particles.Particles(context, omit_painter=tstutils.no_ui())
     return SetupInfo(test_mesh, context, particles, 0.01, painticle_settings,

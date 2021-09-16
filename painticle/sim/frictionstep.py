@@ -21,13 +21,18 @@ from . import simulationstep
 
 from .. import numpyutils
 
+from bpy.props import FloatProperty
 import numpy as np
 
 
 class FrictionStep(simulationstep.SimulationStep):
+
+    friction_coefficient: FloatProperty(name="Friction",
+                                        description="The friction coefficient (how sticky is the surface).",
+                                        min=0.0, soft_max=0.1, default=0.01, options=set())
+
     def simulate(self, sim_data: simulationstep.SimulationData, particles: simulationstep.ParticleData,
                  forces: simulationstep.Forces, new_particles: simulationstep.ParticleData):
-        physics = sim_data.settings.physics
         # Friction calculation
         # Project forces onto normal vector
         # We don't need to divide by the square length of normal, since this is a normalized vector.
@@ -38,5 +43,5 @@ class FrictionStep(simulationstep.SimulationStep):
         plane_force = forces - ortho_force
         # factor is the inverse of what we need here, since the normal is pointing to the outside of the surface,
         # but friction only applies if force is applied towards the surface. Hence we use (1+x) instead of (1-x)
-        friction = np.clip(1+physics.friction_coefficient*factor/numpyutils.vec_length(plane_force), 0, 1)
+        friction = np.clip(1+self.friction_coefficient*factor/numpyutils.vec_length(plane_force), 0, 1)
         return plane_force * friction[:, np.newaxis]

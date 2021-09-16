@@ -23,9 +23,10 @@ from . import gpu_utils
 from . import dependencies
 from . import accel
 from . import utils
-from . import preferences
 from . import meshbuffer
 from . import overbaker
+from .settings import preferences
+from .sim import particle_simulator
 from .utils import Error
 
 import bpy
@@ -42,8 +43,8 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
     draw_handler = None
     draw_handler_text = None
 
-    def __init__(self, context: bpy.types.Context, hashed_grid: accel.HashedGrid):
-        super().__init__(context)
+    def __init__(self, context: bpy.types.Context, simulator: particle_simulator.ParticleSimulator):
+        super().__init__(context, simulator)
         # Fetch preferences:
         # We're using the area of the image as preview threshold, preference specifies the edge length
         self.preview_threshold = preferences.get_instance(context).preview_threshold_edge
@@ -65,7 +66,6 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         self.mesh_buffer = meshbuffer.MeshBuffer(self.glcontext, self.paint_shader)
         self.mesh_buffer.build_mesh_vbo(self.get_active_mesh())
         # Setup hashed grid and the GPU buffers for it
-        self.hashed_grid = hashed_grid
         self.hashed_grid_buffer = self.glcontext.buffer(reserve=1)
         # A hack for the update problem
         self.roll_factor = 1
@@ -238,14 +238,15 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
         brush = self.get_active_brush()
         self.paint_shader["strength"] = brush.strength
         self.paint_shader['time_step'] = time_step
-        self.paint_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
+        self.paint_shader["particle_size_age_factor"] = self.get_particle_size_age_factor()
 
     def update_hashed_grid_buffer(self):
-        fixed_struct = struct.pack("fI", self.hashed_grid.voxel_size, self.hashed_grid.num_particles)
+        hashed_grid = self.simulator.hashed_grid
+        fixed_struct = struct.pack("fI", hashed_grid.voxel_size, hashed_grid.num_particles)
         fixed_struct_size = len(fixed_struct)
-        cell_offsets = self.hashed_grid.cell_offsets
+        cell_offsets = hashed_grid.cell_offsets
         cell_offsets_size = len(cell_offsets)*4  # floats have 4 bytes
-        sorted_particle_ids = self.hashed_grid.sorted_particle_ids
+        sorted_particle_ids = hashed_grid.sorted_particle_ids
         sorted_particle_ids_size = len(sorted_particle_ids)*2*4  # 2 unsigned int with each 4 bytes
         self.hashed_grid_buffer.orphan(fixed_struct_size+cell_offsets_size+sorted_particle_ids_size)
         self.hashed_grid_buffer.write(fixed_struct, offset=0)
@@ -260,7 +261,7 @@ class ParticlePainterGPU(particle_painter.ParticlePainter):
             height = self.paintbuffer.height
             self.preview_shader["image_height"] = height
             self.preview_shader["projection"] = utils.matrix_to_tuple(self.context.region_data.window_matrix)
-            self.preview_shader["particle_size_age_factor"] = self.get_particle_settings().particle_size_age_factor
+            self.preview_shader["particle_size_age_factor"] = self.get_particle_size_age_factor()
         elif self.preview_mode == "texture_overlay":
             self.preview_shader["opacity"] = self.overlay_preview_opacity
         else:

@@ -18,20 +18,21 @@
 import bpy
 import bl_operators
 
-from . import settings
+from .. import settings
+from ..ops.createdefaultbrushtree import CreateDefaultBrushTree
+from ..ops.setactivebrushop import SetActiveBrushOp
 
 
-class ParticlePaintPanel:
+class PAINTiclePanel:
     """ A mixin class for the concrete panels below """
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Tool"
-    bl_options = {"DEFAULT_CLOSED"}
 
 
-class ParticlePaintPresetsMenu(bpy.types.Menu):
+class PAINTiclePresetsMenu(bpy.types.Menu):
     """ A custom preset operator for the painticle panel """
-    bl_idname = "OBJECT_MT_particlepaintpresetsmenu"
+    bl_idname = "OBJECT_MT_painticlepresetsmenu"
     bl_label = "PAINTicle Presets"
     preset_subdir = "scene/painticle_presets"
     preset_operator = "script.execute_preset"
@@ -42,7 +43,7 @@ class AddPresetParticleSettings(bl_operators.presets.AddPresetBase, bpy.types.Op
     '''Add a PAINTicle Settings Preset'''
     bl_idname = "scene.painticle_preset_add"
     bl_label = "Add PAINTicle Preset"
-    preset_menu = "OBJECT_MT_particlepaintpresetsmenu"
+    preset_menu = "OBJECT_MT_painticlepresetsmenu"
 
     # variable used for all preset values
     preset_defines = [
@@ -59,12 +60,12 @@ class AddPresetParticleSettings(bl_operators.presets.AddPresetBase, bpy.types.Op
     def register(cls):
         # We can only initialize the preset_values attribute after the Settings class has been registered.
         AddPresetParticleSettings.preset_values = [
-                "obj."+x for x in settings.Settings.bl_rna.properties.keys() if x != "rna_type"
+                "obj."+x for x in settings.core.Settings.bl_rna.properties.keys() if x != "rna_type"
             ]
         assert(len(AddPresetParticleSettings.preset_values) > 1)
 
 
-class ParticlePaintMainPanel(ParticlePaintPanel, bpy.types.Panel):
+class PAINTicleMainPanel(PAINTiclePanel, bpy.types.Panel):
     """ The main painticle panel, shown in the tool settings """
     bl_label = "PAINTicle"
     bl_idname = "PAINTICLE_PT_main_panel"
@@ -79,38 +80,67 @@ class ParticlePaintMainPanel(ParticlePaintPanel, bpy.types.Panel):
         layout.use_property_split = True
 
         row = layout.row(align=True)
-        row.menu(ParticlePaintPresetsMenu.bl_idname, text=ParticlePaintPresetsMenu.bl_label)
+        row.menu(PAINTiclePresetsMenu.bl_idname, text=PAINTiclePresetsMenu.bl_label)
         row.operator(AddPresetParticleSettings.bl_idname, text="", icon='ADD')
         row.operator(AddPresetParticleSettings.bl_idname, text="", icon='REMOVE').remove_active = True
 
         settings = context.scene.painticle_settings
-        layout.prop(settings, "flow_rate")
-        layout.prop(settings, "particle_size")
-        layout.prop(settings, "particle_size_random")
-        layout.prop(settings, "particle_size_age_factor")
-        layout.prop(settings, "mass")
-        layout.prop(settings, "mass_random")
-        layout.prop(settings, "max_age")
-        layout.prop(settings, "max_age_random")
-        layout.prop(settings, "color_random")
-        layout.prop(settings, "repulsion_factor")
         layout.prop(settings, "stop_painting_on_mouse_release")
+        layout.template_ID(settings, "brush", new=CreateDefaultBrushTree.bl_idname)
 
 
-class ParticlePaintPhysicsPanel(ParticlePaintPanel, bpy.types.Panel):
+class PAINTiclePhysicsPanel(PAINTiclePanel, bpy.types.Panel):
     """ A sub panel grouping the physics settings """
     bl_label = "Physics"
     bl_idname = "PAINTICLE_PT_physics_panel"
     bl_parent_id = "PAINTICLE_PT_main_panel"
+    bl_order = 2
 
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
         physics = context.scene.painticle_settings.physics
-        layout.prop(physics, "gravity")
-        layout.prop(physics, "initial_speed")
-        layout.prop(physics, "initial_speed_random")
-        layout.prop(physics, "drag_coefficient")
-        layout.prop(physics, "friction_coefficient")
         layout.prop(physics, "max_time_step")
         layout.prop(physics, "sim_sub_steps")
+
+
+class PAINTicleBrushMenu(bpy.types.Menu):
+    """ A custom preset operator for the painticle panel """
+    bl_idname = "OBJECT_MT_painticlebrushmenu"
+    bl_label = "PAINTicle Brush"
+    
+    def draw(self, context):
+        layout = self.layout
+        tree = context.scene.painticle_settings.brush
+        if tree is not None:
+            for n in tree.nodes:
+                if n.bl_idname == "BrushDefineNode":
+                    text = n.label if n.label != "" else n.name
+                    op = layout.operator(SetActiveBrushOp.bl_idname, text=text)
+                    op.node_group = tree.name
+                    op.brush_to_activate = n.name
+
+
+class PAINTicleBrushPanel(PAINTiclePanel, bpy.types.Panel):
+    """ A sub panel grouping the brush settings """
+    bl_label = "Brush"
+    bl_idname = "PAINTICLE_PT_brush_panel"
+    bl_parent_id = "PAINTICLE_PT_main_panel"
+    bl_order = 3
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        brush_tree = context.scene.painticle_settings.brush
+        if brush_tree is not None:
+            active_brush = brush_tree.nodes.get(brush_tree.active_brush)
+            text = PAINTicleBrushMenu.bl_label
+            if active_brush is not None:
+                text = active_brush.label if active_brush.label != "" else active_brush.name
+            layout.menu(PAINTicleBrushMenu.bl_idname, text=text)
+            nodes = brush_tree.get_active_brush_nodes()
+            for node in nodes:
+                box = layout.box()
+                text = node.label if node.label != "" else node.name
+                box.label(text=text)
+                node.draw_buttons(context, box)
