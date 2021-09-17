@@ -11,7 +11,7 @@ This module should be installed automatically when activating the add-on. The pr
 installation by showing a blue/checked button "Install dependencies". If the dependencies are not available, this
 button will be clickable gray and it can trigger the installation of the dependencies.
 
-![]({{site_url}}/images/painticle_preferences.png)
+![](/images/painticle_preferences.png)
 
 # Preview mode selection
 
@@ -20,7 +20,7 @@ updating the texture in blender's image management system is quite costly, start
 threshold (predefined to 1 megapixel = 1024 pixels edge length), the add-on won't update blender's texture on each
 simulation step.
 
-![]({{site_url}}/images/painticle_previewmode.jpg)
+![](/images/painticle_previewmode.jpg)
 
 | Mode | Description |
 | - | - |
