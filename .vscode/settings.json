@@ -25,4 +25,5 @@
     "files.exclude": {
         "*.egg-info": true,
     },
+    "reflow.preferredLineLength": 120,
 }
