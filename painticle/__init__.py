@@ -26,7 +26,7 @@ bl_info = {
     "name": "PAINTicle",
     "author": "Frank Firsching",
     "description": "Paint textures using particle systems",
-    "blender": (2, 92, 0),
+    "blender": (2, 93, 0),
     "version": (0, 1, 0),
     "location": "",
     "doc_url": "https://frankfirsching.github.io/PAINTicle/",
