@@ -28,7 +28,7 @@ the brush's color.
 
 The following image shows possible influences of the color variation to the result. The brush color was chosen as HSV(0.5,0.5,0.5).
 
-![]({{site.baseurl}}/images//painticle_color_variation.jpg)
+![]({{ '/images//painticle_color_variation.jpg' | relative_url }})
 
 From left to right these *Color randomization* parameters were used:
 
