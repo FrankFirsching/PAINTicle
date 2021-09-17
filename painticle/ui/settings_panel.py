@@ -142,5 +142,9 @@ class PAINTicleBrushPanel(PAINTiclePanel, bpy.types.Panel):
             for node in nodes:
                 box = layout.box()
                 text = node.label if node.label != "" else node.name
-                box.label(text=text)
-                node.draw_buttons(context, box)
+                row = box.row(heading=text)
+                row.alignment = "LEFT"
+                # We don't want to write 'enabled', so we replace the property's text.
+                # However setting it to the empty string causes the heading to be truncated, so we set it to a single space
+                row.prop(node.step, "enabled", text=" ")
+                node.draw_filtered_buttons(context, box, lambda x: x != "enabled")

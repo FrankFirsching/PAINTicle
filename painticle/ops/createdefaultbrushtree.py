@@ -46,6 +46,10 @@ def create_default_brush_tree():
     tree.active_brush = brush_define.name
 
     rain = _create_next_step("RainNode", None, tree)
+    rain.step.creation_settings.flow_rate = 2500
+    rain.step.creation_settings.mass = 0.3
+    rain.step.creation_settings.max_age = 0.5
+    rain.step.creation_settings.max_age_random = 0.2
     rain.location[1] = 400
     gravity = _create_next_step("GravityNode", rain, tree)
     wind = _create_next_step("WindNode", gravity, tree)

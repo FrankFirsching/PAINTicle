@@ -17,13 +17,11 @@
 
 # <pep8 compliant>
 
-from bpy.props import IntProperty
-from bpy.types import Node, NodeSocket
+from bpy.types import Node, NodeSocket, PropertyGroup
 from nodeitems_utils import NodeCategory
 
 from ..sim.emitterstep import EmitterStep
 from ..settings.brushtree import BrushTree
-from ..settings.particlecreationsettings import ParticleCreationSettings
 
 
 class BrushSocket(NodeSocket):
@@ -55,20 +53,23 @@ class BrushTreeNode(Node):
         self.width = 250
 
     def draw_buttons(self, context, layout):
+        self.draw_filtered_buttons(context, layout)
+
+    def draw_filtered_buttons(self, context, layout, filter=None):
         if hasattr(self, "step"):
-            self._draw_step_buttons(self.step.__class__, self.step, layout)
+            self._draw_step_buttons(self.step.__class__, self.step, layout, filter)
         else:
             layout.label(text=f"{self.bl_label} does not define which step it represents.")
 
-    def _draw_step_buttons(self, cls, obj, layout):
+    def _draw_step_buttons(self, cls, obj, layout, filter=None):
         for base in cls.__bases__:
-            self._draw_step_buttons(base, obj, layout)
+            self._draw_step_buttons(base, obj, layout, filter)
         if hasattr(cls, "__annotations__"):
             for prop in self._get_annotations(cls):
                 prop_value = getattr(obj, prop)
-                if isinstance(prop_value, ParticleCreationSettings):
-                    self._draw_step_buttons(prop_value.__class__, prop_value, layout)
-                else:
+                if isinstance(prop_value, PropertyGroup):
+                    self._draw_step_buttons(prop_value.__class__, prop_value, layout, filter)
+                elif filter is None or filter(prop):
                     layout.prop(obj, prop)
 
     def _get_annotations(self, o):
