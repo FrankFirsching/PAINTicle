@@ -7,7 +7,7 @@ nav_order: 3
 To activate the particle brush, enter texture paint mode as usual. Then run the add-on's operator
 `PAINTicle` by clicking on the menu button in the 3d-view's top menu bar.
 
-![](/images//painticle_menubutton.png)
+![]({{site.baseurl}}/images//painticle_menubutton.png)
 
 This will activate the add-on on the object currently been drawn on. If an existing particle brush is selected, this
 one is getting used. If none is selected (e.g. using it for the first time on a new scene), a new set of default
@@ -21,7 +21,7 @@ last stroke is not being synchronized to blender's version of the image anymore 
 
  The *Tools* panel offers a group with settings for the particle brush:
 
- ![](/images//painticle_settings.png)
+ ![]({{site.baseurl}}/images//painticle_settings.png)
 
 | Property                            | Description                                                                                                                                                   |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
